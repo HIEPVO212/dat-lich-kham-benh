@@ -44,7 +44,7 @@ export default function Header() {
         boxShadow: '0 2px 8px rgba(0,0,0,.12)',
       }}
     >
-      <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
         <div style={{ background: '#fff', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <HeartFilled style={{ color: '#2563eb', fontSize: 18 }} />
         </div>

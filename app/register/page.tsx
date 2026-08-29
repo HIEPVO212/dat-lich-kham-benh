@@ -5,6 +5,7 @@ import { Form, Input, Button, message, Card } from 'antd'
 import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { registerUser } from '../../lib/auth'
+import { ArrowLeftOutlined } from '@ant-design/icons'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -28,9 +29,12 @@ export default function RegisterPage() {
     }
   }
 
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f5ff' }}>
-      <Card style={{ width: 420 }} title="Đăng ký tài khoản">
+return (
+  <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f5ff', position: 'relative' }}>
+    <Link href="/" style={{ position: 'absolute', top: 24, left: 24, display: 'flex', alignItems: 'center', gap: 6, color: '#2563eb' }}>
+      <ArrowLeftOutlined /> Về trang chủ
+    </Link>
+    <Card style={{ width: 420 }} title="Đăng ký tài khoản">
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item name="full_name" label="Họ tên" rules={[{ required: true, message: 'Nhập họ tên' }]}>
             <Input prefix={<UserOutlined />} placeholder="Nguyễn Văn A" />
