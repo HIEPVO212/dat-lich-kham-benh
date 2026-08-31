@@ -13,7 +13,7 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 })
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 9
 
 type Doctor = {
   id: number
@@ -32,12 +32,12 @@ type Doctor = {
 }
 
 const SPECIALTY_THEMES = [
-  { grad: 'from-blue-500 to-indigo-600', hex: ['#3B82F6', '#4F46E5'], tagBg: 'bg-blue-50', tagText: 'text-blue-700', tagBorder: 'border-blue-200' },
-  { grad: 'from-teal-500 to-cyan-600', hex: ['#14B8A6', '#0891B2'], tagBg: 'bg-teal-50', tagText: 'text-teal-700', tagBorder: 'border-teal-200' },
-  { grad: 'from-rose-500 to-pink-600', hex: ['#F43F5E', '#DB2777'], tagBg: 'bg-rose-50', tagText: 'text-rose-700', tagBorder: 'border-rose-200' },
-  { grad: 'from-amber-500 to-orange-600', hex: ['#F59E0B', '#EA580C'], tagBg: 'bg-amber-50', tagText: 'text-amber-700', tagBorder: 'border-amber-200' },
-  { grad: 'from-violet-500 to-purple-600', hex: ['#8B5CF6', '#9333EA'], tagBg: 'bg-violet-50', tagText: 'text-violet-700', tagBorder: 'border-violet-200' },
-  { grad: 'from-emerald-500 to-green-600', hex: ['#10B981', '#16A34A'], tagBg: 'bg-emerald-50', tagText: 'text-emerald-700', tagBorder: 'border-emerald-200' },
+  { grad: 'from-blue-500 to-indigo-600', hex: ['#3B82F6', '#4F46E5'], tagBg: 'bg-blue-50', tagText: 'text-blue-700', tagBorder: 'border-blue-200', tint: 'from-blue-50', shadow: 'rgba(59,130,246,0.30)' },
+  { grad: 'from-teal-500 to-cyan-600', hex: ['#14B8A6', '#0891B2'], tagBg: 'bg-teal-50', tagText: 'text-teal-700', tagBorder: 'border-teal-200', tint: 'from-teal-50', shadow: 'rgba(20,184,166,0.30)' },
+  { grad: 'from-rose-500 to-pink-600', hex: ['#F43F5E', '#DB2777'], tagBg: 'bg-rose-50', tagText: 'text-rose-700', tagBorder: 'border-rose-200', tint: 'from-rose-50', shadow: 'rgba(244,63,94,0.30)' },
+  { grad: 'from-amber-500 to-orange-600', hex: ['#F59E0B', '#EA580C'], tagBg: 'bg-amber-50', tagText: 'text-amber-700', tagBorder: 'border-amber-200', tint: 'from-amber-50', shadow: 'rgba(245,158,11,0.30)' },
+  { grad: 'from-violet-500 to-purple-600', hex: ['#8B5CF6', '#9333EA'], tagBg: 'bg-violet-50', tagText: 'text-violet-700', tagBorder: 'border-violet-200', tint: 'from-violet-50', shadow: 'rgba(139,92,246,0.30)' },
+  { grad: 'from-emerald-500 to-green-600', hex: ['#10B981', '#16A34A'], tagBg: 'bg-emerald-50', tagText: 'text-emerald-700', tagBorder: 'border-emerald-200', tint: 'from-emerald-50', shadow: 'rgba(16,185,129,0.30)' },
 ]
 
 function getTheme(specialty: string) {
@@ -58,6 +58,28 @@ function StatPill({ value, label }: { value: number; label: string }) {
       <span className="text-2xl font-extrabold text-slate-900">{value}</span>
       <span className="text-sm text-slate-500">{label}</span>
     </div>
+  )
+}
+
+// 1 lượt nội dung của dải chữ chạy — được render nhiều lần liên tiếp để tạo
+// vòng lặp liền mạch (hết bản này thì bản kế tiếp vừa vặn thế chỗ, không giật).
+function MarqueeContent() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-2.5 pr-10 text-sm text-slate-600">
+      <HeartOutlined className="text-rose-500" />
+      <span>
+        <b className="font-semibold text-blue-700">Tôn trọng người bệnh:</b> Hãy coi người bệnh như người thân ruột thịt của mình.
+      </span>
+      <span className="text-teal-400">✦</span>
+      <span>
+        <b className="font-semibold text-teal-700">Đặt sức khỏe lên trên hết:</b> Lương y như từ mẫu.
+      </span>
+      <span className="text-rose-300">✦</span>
+      <span>
+        <b className="font-semibold text-rose-700">Trung thực và tận tụy:</b> Người bác sĩ giỏi không chỉ chữa trị căn bệnh, mà là chữa trị người bệnh.
+      </span>
+      <span className="text-blue-300">✦</span>
+    </span>
   )
 }
 
@@ -131,8 +153,13 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
           transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
           transition: 'transform 200ms ease-out, box-shadow 200ms ease-out',
         }}
-        className="group relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.06)] hover:shadow-[0_25px_45px_-15px_rgba(15,23,42,0.25)]"
+        className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br ${theme.tint} to-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.06)]`}
       >
+        {/* glow màu theo chuyên khoa, hiện khi hover thay cho bóng xám mặc định */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          style={{ boxShadow: `0 25px 45px -15px ${theme.shadow}` }}
+        />
         <div
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
           style={{ background: `radial-gradient(500px circle at ${glare.x}% ${glare.y}%, rgba(255,255,255,0.55), transparent 60%)` }}
@@ -149,7 +176,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
 
         <div className="relative flex gap-4">
           <div
-            className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${theme.grad} text-lg font-bold text-white shadow-lg`}
+            className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${theme.grad} text-xl font-bold text-white shadow-lg`}
           >
             {doctor.avatarUrl && !imgError ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -157,7 +184,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
                 src={doctor.avatarUrl}
                 onError={() => setImgError(true)}
                 alt={doctor.fullName}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover object-top"
               />
             ) : (
               getInitials(doctor.fullName)
@@ -178,10 +205,16 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
         </div>
 
         <div className="relative mt-4 flex flex-wrap items-center gap-1.5">
-          <Rate disabled allowHalf value={doctor.rating} style={{ fontSize: 13, color: '#F59E0B' }} />
-          <span className="text-xs font-medium text-slate-500">
-            {doctor.rating.toFixed(1)} · {doctor.totalReviews} đánh giá
-          </span>
+          {doctor.totalReviews > 0 ? (
+            <>
+              <Rate disabled allowHalf value={doctor.rating} style={{ fontSize: 13, color: '#F59E0B' }} />
+              <span className="text-xs font-medium text-slate-500">
+                {doctor.rating.toFixed(1)} · {doctor.totalReviews} đánh giá
+              </span>
+            </>
+          ) : (
+            <span className="text-xs font-medium text-slate-400">Chưa có đánh giá</span>
+          )}
         </div>
 
         <p className="relative mt-3 line-clamp-2 text-sm leading-relaxed text-slate-500">
@@ -209,7 +242,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
           </div>
         )}
 
-        <div className="relative mt-5">
+        <div className="relative mt-auto pt-5">
           {accepting ? (
             <Link href={`/booking?doctorId=${doctor.id}`}>
               <Button
@@ -292,6 +325,13 @@ export default function DoctorsPage() {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-12px) rotate(4deg); }
           }
+          @keyframes mc-marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+          }
+          .mc-marquee-track:hover {
+            animation-play-state: paused;
+          }
         `}</style>
 
         {/* Hero — phong cách y tế: lớp gradient nhiều tầng tạo chiều sâu,
@@ -351,8 +391,15 @@ export default function DoctorsPage() {
           </div>
         </div>
 
-        {/* Bộ lọc */}
-        <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm">
+        {/* Khu vực lọc + danh sách — thêm các khối màu mờ phía sau để không gian
+            giữa các thẻ không bị trắng trơn, vẫn giữ tông y tế nhẹ nhàng */}
+        <div className="relative">
+          <div className="pointer-events-none absolute -left-16 top-24 h-96 w-96 rounded-full bg-blue-300/50 blur-2xl" />
+          <div className="pointer-events-none absolute right-0 top-[28rem] h-96 w-96 rounded-full bg-teal-300/45 blur-2xl" />
+          <div className="pointer-events-none absolute left-1/4 bottom-0 h-80 w-80 rounded-full bg-rose-300/40 blur-2xl" />
+
+          {/* Bộ lọc */}
+          <div className="relative mb-8 flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm">
           <Input
             placeholder="Tìm theo tên bác sĩ..."
             prefix={<SearchOutlined className="text-slate-400" />}
@@ -362,6 +409,16 @@ export default function DoctorsPage() {
             allowClear
           />
           <Select value={specialty} onChange={setSpecialty} options={specialtyOptions} style={{ minWidth: 220 }} />
+
+          {/* Dải chữ chạy — lấp khoảng trống còn lại, dừng khi rê chuột vào để đọc */}
+          <div className="relative min-w-0 flex-1 overflow-hidden">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-white to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-white to-transparent" />
+            <div className="mc-marquee-track flex w-max" style={{ animation: 'mc-marquee 34s linear infinite' }}>
+              <MarqueeContent />
+              <MarqueeContent />
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -408,6 +465,7 @@ export default function DoctorsPage() {
             )}
           </>
         )}
+        </div>
       </div>
     </PageLayout>
   )
