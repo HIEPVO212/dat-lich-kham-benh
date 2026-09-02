@@ -59,3 +59,18 @@ textarea,
 select {
   font: inherit;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  text-decoration: none;
+}
