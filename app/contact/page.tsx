@@ -1,6 +1,7 @@
 'use client'
 import PageLayout from '../../components/PageLayout'
 import { Form, Input, Button, message } from 'antd'
+import { CONTACT_INFO } from '../../lib/contact'
 
 export default function ContactPage() {
   const onFinish = (values: any) => {
@@ -11,7 +12,8 @@ export default function ContactPage() {
   return (
     <PageLayout>
       <h1>Liên hệ</h1>
-      <p>Email: support@medicare.vn — Hotline: 1900 xxxx</p>
+      <p>Email: {CONTACT_INFO.email} — Hotline: {CONTACT_INFO.hotline}</p>
+      <p>Địa chỉ: {CONTACT_INFO.address}</p>
       <Form layout="vertical" onFinish={onFinish} style={{ maxWidth: 420, marginTop: 24 }}>
         <Form.Item name="name" label="Họ tên" rules={[{ required: true, message: 'Nhập họ tên' }]}>
           <Input />

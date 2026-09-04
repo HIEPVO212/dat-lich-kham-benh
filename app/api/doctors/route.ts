@@ -1,44 +1,52 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '../../../lib/sqlite'
+import { supabase } from '../../../lib/supabase'
 
-// GET /api/doctors — trả JSON danh sách bác sĩ cho trang app/doctors/page.tsx
-// Chạy ở server (Node.js runtime mặc định của Route Handler) vì SQLite là
-// file trên đĩa, KHÔNG thể query trực tiếp từ trình duyệt như Supabase.
 export async function GET() {
   try {
-    const db = getDb()
+    const [doctorResult, specialtyResult, facilityResult, statsResult] = await Promise.all([
+      supabase
+        .from('doctor')
+        .select('doctor_id, full_name, avatar_url, academic_title, specialty_id, experience_years, bio, email, is_accepting_bookings')
+        .order('full_name'),
+      supabase.from('specialty').select('specialty_id, specialty_name'),
+      supabase.from('doctor_primary_facility').select('doctor_id, facility_name, address'),
+      supabase.from('doctor_stats').select('doctor_id, rating, total_reviews, total_patients'),
+    ])
 
-    const doctors = db
-      .prepare(
-        `
-        SELECT
-          d.DoctorId            AS id,
-          d.FullName            AS fullName,
-          d.AvatarUrl           AS avatarUrl,
-          d.AcademicTitle       AS academicTitle,
-          s.SpecialtyName       AS specialty,
-          d.ExperienceYears     AS experienceYears,
-          d.Bio                 AS bio,
-          pf.FacilityName       AS workplaceName,
-          pf.Address            AS workplaceAddress,
-          st.Rating             AS rating,
-          st.TotalReviews       AS totalReviews,
-          st.TotalPatients      AS totalPatients,
-          d.IsAcceptingBookings AS isAcceptingBookings
-        FROM Doctor d
-        JOIN Specialty s ON s.SpecialtyId = d.SpecialtyId
-        LEFT JOIN DoctorPrimaryFacility pf ON pf.DoctorId = d.DoctorId
-        LEFT JOIN DoctorStats st ON st.DoctorId = d.DoctorId
-        ORDER BY d.FullName
-        `
-      )
-      .all()
+    const firstError = doctorResult.error || specialtyResult.error || facilityResult.error || statsResult.error
+    if (firstError) throw firstError
 
-    db.close()
+    const specialties = new Map((specialtyResult.data || []).map((item) => [item.specialty_id, item.specialty_name]))
+    const facilities = new Map((facilityResult.data || []).map((item) => [item.doctor_id, item]))
+    const stats = new Map((statsResult.data || []).map((item) => [item.doctor_id, item]))
+
+    const doctors = (doctorResult.data || []).map((doctor) => {
+      const facility = facilities.get(doctor.doctor_id)
+      const doctorStats = stats.get(doctor.doctor_id)
+
+      return {
+        id: doctor.doctor_id,
+        fullName: doctor.full_name,
+        avatarUrl: doctor.avatar_url,
+        academicTitle: doctor.academic_title,
+        email: doctor.email,
+        specialty: specialties.get(doctor.specialty_id) || 'Chưa cập nhật chuyên khoa',
+        experienceYears: doctor.experience_years || 0,
+        bio: doctor.bio,
+        workplaceName: facility?.facility_name || null,
+        workplaceAddress: facility?.address || null,
+        rating: doctorStats?.rating || 0,
+        totalReviews: doctorStats?.total_reviews || 0,
+        totalPatients: doctorStats?.total_patients || 0,
+        isAcceptingBookings: doctor.is_accepting_bookings ? 1 : 0,
+      }
+    })
+
     return NextResponse.json(doctors)
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Không đọc được dữ liệu bác sĩ từ Supabase'
     return NextResponse.json(
-      { error: err?.message || 'Không đọc được database bác sĩ' },
+      { error: message },
       { status: 500 }
     )
   }

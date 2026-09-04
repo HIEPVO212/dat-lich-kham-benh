@@ -6,11 +6,34 @@ import PageLayout from '../../components/PageLayout'
 import { getCurrentUser } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 
+type AdminAppointment = {
+  id: string
+  appointment_date: string
+  appointment_time: string
+  status: string
+  reason: string | null
+  patient: { full_name: string | null; phone: string | null }[] | null
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [checking, setChecking] = useState(true)
-  const [appointments, setAppointments] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<AdminAppointment[]>([])
   const [loading, setLoading] = useState(false)
+
+  const loadAppointments = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, appointment_date, appointment_time, status, reason, patient:profiles!appointments_patient_id_fkey(full_name, phone)')
+      .order('appointment_date', { ascending: false })
+    if (error) {
+      message.error('Không tải được danh sách lịch hẹn')
+    } else {
+      setAppointments((data || []) as AdminAppointment[])
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
     const check = async () => {
@@ -21,20 +44,10 @@ export default function AdminPage() {
         return
       }
       setChecking(false)
-      loadAppointments()
+      await loadAppointments()
     }
     check()
-  }, [])
-
-  const loadAppointments = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('id, appointment_date, appointment_time, status, reason, patient:profiles!appointments_patient_id_fkey(full_name, phone)')
-      .order('appointment_date', { ascending: false })
-    if (!error) setAppointments(data || [])
-    setLoading(false)
-  }
+  }, [router])
 
   const updateStatus = async (id: string, status: string) => {
     const { error } = await supabase.from('appointments').update({ status }).eq('id', id)
@@ -42,7 +55,7 @@ export default function AdminPage() {
       message.error('Cập nhật thất bại')
     } else {
       message.success('Đã cập nhật')
-      loadAppointments()
+      await loadAppointments()
     }
   }
 
@@ -64,8 +77,8 @@ export default function AdminPage() {
   const columns = [
     { title: 'Ngày khám', dataIndex: 'appointment_date', key: 'date' },
     { title: 'Giờ', dataIndex: 'appointment_time', key: 'time' },
-    { title: 'Bệnh nhân', key: 'patient', render: (_: any, r: any) => r.patient?.full_name || '—' },
-    { title: 'SĐT', key: 'phone', render: (_: any, r: any) => r.patient?.phone || '—' },
+    { title: 'Bệnh nhân', key: 'patient', render: (_: unknown, r: AdminAppointment) => r.patient?.[0]?.full_name || '—' },
+    { title: 'SĐT', key: 'phone', render: (_: unknown, r: AdminAppointment) => r.patient?.[0]?.phone || '—' },
     { title: 'Lý do khám', dataIndex: 'reason', key: 'reason' },
     {
       title: 'Trạng thái',
@@ -76,12 +89,12 @@ export default function AdminPage() {
     {
       title: 'Thao tác',
       key: 'action',
-      render: (_: any, r: any) => (
+      render: (_: unknown, r: AdminAppointment) => (
         <Space>
-          <Button size="small" type="primary" onClick={() => updateStatus(r.id, 'confirmed')}>
+          <Button size="small" type="primary" disabled={r.status !== 'pending'} onClick={() => updateStatus(r.id, 'confirmed')}>
             Duyệt
           </Button>
-          <Button size="small" danger onClick={() => updateStatus(r.id, 'cancelled')}>
+          <Button size="small" danger disabled={r.status !== 'pending'} onClick={() => updateStatus(r.id, 'cancelled')}>
             Huỷ
           </Button>
         </Space>

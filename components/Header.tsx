@@ -36,7 +36,10 @@ export default function Header() {
   return (
     <AntHeader
       style={{
-        background: 'linear-gradient(90deg, #0ea5e9, #2563eb)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        background: 'linear-gradient(90deg, #0891b2, #1d4ed8)',
         padding: '0 32px',
         display: 'flex',
         alignItems: 'center',
@@ -45,10 +48,22 @@ export default function Header() {
       }}
     >
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-        <div style={{ background: '#fff', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <HeartFilled style={{ color: '#2563eb', fontSize: 18 }} />
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            borderRadius: 12,
+            width: 36,
+            height: 36,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <HeartFilled style={{ color: '#fff', fontSize: 18 }} />
         </div>
-        <span style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>Medicare</span>
+        <span style={{ color: '#fff', fontSize: 18, fontWeight: 900, letterSpacing: '0.18em' }}>
+          HEALTHCONNECT
+        </span>
       </Link>
 
       {user ? (
@@ -60,7 +75,7 @@ export default function Header() {
           )}
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#fff' }}>
-              <Avatar icon={<UserOutlined />} style={{ background: '#fff', color: '#2563eb' }} />
+              <Avatar icon={<UserOutlined />} style={{ background: '#fff', color: '#1d4ed8' }} />
               <div style={{ lineHeight: 1.2 }}>
                 <div>{user.full_name || user.email}</div>
                 <div style={{ fontSize: 12, opacity: 0.85 }}>{roleLabel[user.role] || 'Thành viên'}</div>

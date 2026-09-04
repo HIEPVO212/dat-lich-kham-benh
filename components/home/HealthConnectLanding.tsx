@@ -1,28 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { CONTACT_INFO } from '../../lib/contact'
 import {
   ArrowRightOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  CloseOutlined,
   HeartFilled,
   HeartOutlined,
-  MenuOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-
-const navItems = [
-  { label: 'Trang chủ', href: '/' },
-  { label: 'Bác sĩ', href: '/doctors' },
-  { label: 'Lịch hẹn', href: '/appointments' },
-  { label: 'Dịch vụ', href: '/services' },
-  { label: 'Liên hệ', href: '#contact' },
-]
 
 const statHighlights = [
   { value: '15k+', label: 'Bệnh nhân tin tưởng' },
@@ -149,90 +139,8 @@ const faqs = [
 ]
 
 export default function HealthConnectLanding() {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <nav className="flex h-20 items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 shadow-lg shadow-cyan-500/20">
-                <HeartFilled className="text-lg text-white" />
-              </div>
-              <div>
-                <div className="text-lg font-black tracking-[0.22em] text-slate-900">HEALTHCONNECT</div>
-              </div>
-            </Link>
-
-            <div className="hidden items-center gap-8 md:flex">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="text-sm font-medium text-slate-600 transition hover:text-cyan-700"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="hidden items-center gap-3 md:flex">
-              <Link
-                href="/login"
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:text-cyan-700"
-              >
-                Đăng nhập
-              </Link>
-              <Link
-                href="/booking"
-                className="rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-600/30 transition hover:bg-cyan-700"
-              >
-                Đặt lịch
-              </Link>
-            </div>
-
-            <button
-              type="button"
-              aria-label="Toggle menu"
-              onClick={() => setMobileOpen((value) => !value)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 md:hidden"
-            >
-              {mobileOpen ? <CloseOutlined /> : <MenuOutlined />}
-            </button>
-          </nav>
-
-          {mobileOpen && (
-            <div className="space-y-3 border-t border-slate-200 pb-4 pt-4 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="block rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-cyan-700"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <div className="flex gap-3 pt-2">
-                <Link
-                  href="/login"
-                  className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-700"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  href="/booking"
-                  className="flex-1 rounded-full bg-cyan-600 px-4 py-2 text-center text-sm font-semibold text-white"
-                >
-                  Đặt lịch
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
       <main>
         <section className="relative overflow-hidden bg-gradient-to-br from-cyan-50 via-white to-emerald-50">
           <div className="absolute left-[-120px] top-16 h-72 w-72 rounded-full bg-cyan-200/60 blur-3xl" />
@@ -513,7 +421,7 @@ export default function HealthConnectLanding() {
             <div className="text-lg font-black tracking-[0.22em] text-white">HEALTHCONNECT</div>
           </div>
           <div className="text-sm text-slate-400">© 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.</div>
-          <div className="text-sm text-slate-400">Hỗ trợ 24/7 • hotline 1900 1234</div>
+          <div className="text-sm text-slate-400">Hỗ trợ 24/7 • hotline {CONTACT_INFO.hotline}</div>
         </div>
       </footer>
     </div>

@@ -1,5 +1,10 @@
 import HealthConnectLanding from '../components/home/HealthConnectLanding'
+import PageLayout from '../components/PageLayout'
 
 export default function HomePage() {
-  return <HealthConnectLanding />
+  return (
+    <PageLayout bare>
+      <HealthConnectLanding />
+    </PageLayout>
+  )
 }

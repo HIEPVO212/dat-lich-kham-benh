@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Header from '../../components/Header'
+import { CONTACT_INFO } from '../../lib/contact'
 
 const serviceHighlights = [
   {
@@ -147,7 +148,7 @@ export default function ServicesPage() {
             <div className="text-lg font-black tracking-[0.22em] text-white">HEALTHCONNECT</div>
           </div>
           <div className="text-sm text-slate-400">© 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.</div>
-          <div className="text-sm text-slate-400">Hỗ trợ 24/7 • hotline 1900 1234</div>
+          <div className="text-sm text-slate-400">Hỗ trợ 24/7 • hotline {CONTACT_INFO.hotline}</div>
         </div>
       </footer>
     </div>

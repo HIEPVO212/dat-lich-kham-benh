@@ -7,7 +7,7 @@ import Sidebar from './Sidebar'
 
 const { Content } = Layout
 
-export default function PageLayout({ children }: { children: React.ReactNode }) {
+export default function PageLayout({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
   const router = useRouter()
 
   return (
@@ -17,29 +17,35 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
         <Sidebar />
         <Content
           style={{
-            margin: 20,
-            padding: 26,
-            background: 'rgba(255,255,255,0.8)',
-            borderRadius: 22,
-            border: '1px solid rgba(37, 99, 235, 0.08)',
-            boxShadow: '0 12px 30px rgba(37, 99, 235, 0.06)',
-            backdropFilter: 'blur(10px)',
+            ...(bare
+              ? {}
+              : {
+                  margin: 20,
+                  padding: 26,
+                  background: 'rgba(255,255,255,0.8)',
+                  borderRadius: 22,
+                  border: '1px solid rgba(37, 99, 235, 0.08)',
+                  boxShadow: '0 12px 30px rgba(37, 99, 235, 0.06)',
+                  backdropFilter: 'blur(10px)',
+                }),
           }}
         >
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => router.back()}
-            style={{
-              marginBottom: 18,
-              borderRadius: 10,
-              background: '#eff6ff',
-              borderColor: '#bfdbfe',
-              color: '#1d4ed8',
-              fontWeight: 600,
-            }}
-          >
-            Quay lại
-          </Button>
+          {!bare && (
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => router.back()}
+              style={{
+                marginBottom: 18,
+                borderRadius: 10,
+                background: '#eff6ff',
+                borderColor: '#bfdbfe',
+                color: '#1d4ed8',
+                fontWeight: 600,
+              }}
+            >
+              Quay lại
+            </Button>
+          )}
           {children}
         </Content>
       </Layout>

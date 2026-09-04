@@ -43,6 +43,8 @@ import {
 } from '@ant-design/icons'
 import PageLayout from '../../components/PageLayout'
 import { getCurrentUser } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
+import { CONTACT_INFO } from '../../lib/contact'
 
 dayjs.locale('vi')
 
@@ -55,6 +57,7 @@ type Doctor = {
   fullName: string
   avatarUrl: string | null
   academicTitle: string | null
+  email?: string | null
   specialty: string
   experienceYears?: number
   workplaceName?: string | null
@@ -83,106 +86,6 @@ export type AppointmentRecord = {
   color?: string
 }
 
-// Danh sách Bác sĩ dự phòng (Mock data fallback chuẩn hóa khớp dữ liệu SQLite)
-const FALLBACK_DOCTORS: Doctor[] = [
-  {
-    id: 1,
-    fullName: 'Nguyễn Thị Lan',
-    academicTitle: 'BS. CKII',
-    specialty: 'Da liễu',
-    avatarUrl: null,
-    experienceYears: 12,
-    workplaceName: 'Khoa Da liễu - Phòng 302',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 4.9,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 2,
-    fullName: 'Trần Văn Hưng',
-    academicTitle: 'PGS. TS. BS',
-    specialty: 'Tim mạch',
-    avatarUrl: null,
-    experienceYears: 18,
-    workplaceName: 'Trung tâm Tim mạch - Phòng 208',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 5.0,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 3,
-    fullName: 'Phạm Hồng Anh',
-    academicTitle: 'ThS. BS',
-    specialty: 'Nhi khoa',
-    avatarUrl: null,
-    experienceYears: 9,
-    workplaceName: 'Khoa Nhi chất lượng cao - Phòng 120',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 4.8,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 4,
-    fullName: 'Lê Hoàng Nam',
-    academicTitle: 'BS. CKI',
-    specialty: 'Răng Hàm Mặt',
-    avatarUrl: null,
-    experienceYears: 10,
-    workplaceName: 'Khoa Nha khoa thẩm mỹ - Phòng 405',
-    workplaceAddress: 'Cơ sở 2: 88 Hai Bà Trưng, Hoàn Kiếm, Hà Nội',
-    rating: 4.9,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 5,
-    fullName: 'Hoàng Minh Đức',
-    academicTitle: 'BS. CKII',
-    specialty: 'Cơ Xương Khớp',
-    avatarUrl: null,
-    experienceYears: 15,
-    workplaceName: 'Khoa Cơ Xương Khớp - Phòng 215',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 4.7,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 6,
-    fullName: 'Vũ Thuỳ Linh',
-    academicTitle: 'ThS. BS',
-    specialty: 'Mắt',
-    avatarUrl: null,
-    experienceYears: 8,
-    workplaceName: 'Khoa Nhãn khoa - Phòng 106',
-    workplaceAddress: 'Cơ sở 2: 88 Hai Bà Trưng, Hoàn Kiếm, Hà Nội',
-    rating: 4.8,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 7,
-    fullName: 'Đặng Quốc Huy',
-    academicTitle: 'BS. CKI',
-    specialty: 'Tai Mũi Họng',
-    avatarUrl: null,
-    experienceYears: 11,
-    workplaceName: 'Khoa Tai Mũi Họng - Phòng 310',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 4.9,
-    isAcceptingBookings: 1,
-  },
-  {
-    id: 8,
-    fullName: 'Ngô Hải Yến',
-    academicTitle: 'PGS. TS',
-    specialty: 'Thần kinh',
-    avatarUrl: null,
-    experienceYears: 20,
-    workplaceName: 'Viện Thần kinh học - Phòng 501',
-    workplaceAddress: 'Cơ sở 1: 345 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    rating: 5.0,
-    isAcceptingBookings: 1,
-  },
-]
-
 // Khung giờ khám theo ca sáng và ca chiều
 const TIME_SLOTS = [
   { shift: 'Sáng', slots: ['08:00 - 08:30', '08:30 - 09:00', '09:00 - 09:30', '09:30 - 10:00', '10:00 - 10:30', '10:30 - 11:00'] },
@@ -194,7 +97,7 @@ function BookingFormContent() {
   const searchParams = useSearchParams()
   const [form] = Form.useForm()
 
-  const [doctors, setDoctors] = useState<Doctor[]>(FALLBACK_DOCTORS)
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(true)
   const [submitting, setSubmitting] = useState<boolean>(false)
 
@@ -208,7 +111,7 @@ function BookingFormContent() {
   const [successModalOpen, setSuccessModalOpen] = useState<boolean>(false)
   const [latestBooking, setLatestBooking] = useState<AppointmentRecord | null>(null)
 
-  // 1. Tải danh sách bác sĩ từ API /api/doctors (fallback nếu lỗi)
+  // 1. Tải danh sách bác sĩ từ API /api/doctors
   useEffect(() => {
     let isMounted = true
     const fetchDoctors = async () => {
@@ -221,7 +124,10 @@ function BookingFormContent() {
           setDoctors(data)
         }
       } catch {
-        // Giữ FALLBACK_DOCTORS để form luôn hoạt động trơn tru
+        if (isMounted) {
+          setDoctors([])
+          message.error('Không tải được danh sách bác sĩ từ Supabase')
+        }
       } finally {
         if (isMounted) setLoadingDoctors(false)
       }
@@ -305,15 +211,58 @@ function BookingFormContent() {
   const handleSubmit = async (values: any) => {
     setSubmitting(true)
     try {
-      const formattedDate = values.date ? dayjs(values.date).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')
+      const user = await getCurrentUser()
+      if (!user) throw new Error('Vui lòng đăng nhập trước khi đặt lịch khám')
+
+      const appointmentDate = values.date ? dayjs(values.date).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+      const reason = values.reason ? values.reason.trim() : 'Khám tổng quát & tư vấn sức khỏe'
       const chosenDoctor = doctors.find((d) => d.id === values.doctorId)
+      if (!chosenDoctor) throw new Error('Không tìm thấy bác sĩ đã chọn')
+
+      let savedAppointment: { id: string; created_at: string } | null = null
+      let error: Error | null = null
+      const demoUser = user.id === '00000000-0000-4000-8000-000000000001'
+
+      if (demoUser) {
+        savedAppointment = { id: `DEMO-${Date.now()}`, created_at: new Date().toISOString() }
+        const existing = JSON.parse(localStorage.getItem('healthconnect_demo_appointments') || '[]')
+        existing.unshift({
+          id: savedAppointment.id,
+          doctor_id: chosenDoctor.id,
+          appointment_date: appointmentDate,
+          appointment_time: values.time,
+          reason: `[doctor:${chosenDoctor.id}] ${reason}`,
+          status: 'pending',
+        })
+        localStorage.setItem('healthconnect_demo_appointments', JSON.stringify(existing))
+      } else {
+        const firstInsert = await supabase
+          .from('appointments')
+          .insert({
+            patient_id: user.id,
+            doctor_id: chosenDoctor.id,
+            appointment_date: appointmentDate,
+            appointment_time: values.time,
+            reason,
+            status: 'pending',
+          })
+          .select('id, created_at')
+          .single()
+        savedAppointment = firstInsert.data
+        error = firstInsert.error
+      }
+
+      if (error) throw error
+      if (!savedAppointment) throw new Error('Supabase không trả về lịch hẹn vừa tạo')
+
+      const formattedDate = values.date ? dayjs(values.date).format('DD/MM/YYYY') : dayjs().format('DD/MM/YYYY')
       const doctorDisplayName = chosenDoctor
         ? `${chosenDoctor.academicTitle ? chosenDoctor.academicTitle + ' ' : ''}${chosenDoctor.fullName}`
         : 'Bác sĩ chuyên khoa'
 
       // Đối tượng Booking chuẩn theo yêu cầu dự án
       const newBooking: AppointmentRecord = {
-        id: `MED-${Date.now().toString().slice(-6)}`,
+        id: savedAppointment.id,
         patientName: values.patientName.trim(),
         phone: values.phone.trim(),
         email: values.email ? values.email.trim() : '',
@@ -321,40 +270,20 @@ function BookingFormContent() {
         doctor: doctorDisplayName,
         date: formattedDate,
         time: values.time,
-        reason: values.reason ? values.reason.trim() : 'Khám tổng quát & tư vấn sức khỏe',
+        reason,
         status: 'Chờ xác nhận',
-        createdAt: new Date().toISOString(),
+        createdAt: savedAppointment.created_at,
         // Các trường đồng bộ trang Lịch hẹn của thành viên nhóm
         room: chosenDoctor?.workplaceName || 'Phòng khám đa khoa Medicare',
         type: 'Khám chuyên khoa',
         color: 'gold',
       }
 
-      // Lưu dữ liệu vào localStorage ("medicare_appointments")
-      if (typeof window !== 'undefined') {
-        const existingRaw = localStorage.getItem('medicare_appointments')
-        let appointmentsList: AppointmentRecord[] = []
-        if (existingRaw) {
-          try {
-            const parsed = JSON.parse(existingRaw)
-            if (Array.isArray(parsed)) appointmentsList = parsed
-          } catch (e) {
-            appointmentsList = []
-          }
-        }
-        // Thêm lịch mới vào đầu danh sách
-        appointmentsList.unshift(newBooking)
-        localStorage.setItem('medicare_appointments', JSON.stringify(appointmentsList))
-
-        // Dispatch sự kiện storage để các tab/trang khác cùng cập nhật
-        window.dispatchEvent(new Event('storage'))
-      }
-
       setLatestBooking(newBooking)
       setSuccessModalOpen(true)
       message.success('Đặt lịch khám bệnh thành công!')
-    } catch (err: any) {
-      message.error(err?.message || 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại!')
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại!')
     } finally {
       setSubmitting(false)
     }
@@ -917,7 +846,7 @@ function BookingFormContent() {
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: '#94a3b8' }}>Tổng đài hỗ trợ đặt lịch 24/7</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#38bdf8' }}>1900 9090</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#38bdf8' }}>{CONTACT_INFO.hotline}</div>
                 </div>
               </div>
             </Card>

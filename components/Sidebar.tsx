@@ -26,7 +26,18 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <Sider width={230} style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}>
+    <Sider
+      width={230}
+      style={{
+        position: 'sticky',
+        top: 64,
+        height: 'calc(100vh - 64px)',
+        alignSelf: 'flex-start',
+        background: '#fff',
+        borderRight: '1px solid #f0f0f0',
+        overflow: 'auto',
+      }}
+    >
       <Menu
         mode="inline"
         selectedKeys={[pathname]}
