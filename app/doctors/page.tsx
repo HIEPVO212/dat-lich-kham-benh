@@ -6,6 +6,7 @@ import { Be_Vietnam_Pro } from 'next/font/google'
 import { Input, Select, Button, Empty, Rate, Pagination, message } from 'antd'
 import { SearchOutlined, CalendarOutlined, EnvironmentOutlined, HeartOutlined, MedicineBoxOutlined } from '@ant-design/icons'
 import PageLayout from '../../components/PageLayout'
+import { supabase } from '../../lib/supabase'
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
@@ -13,7 +14,7 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 })
 
-const PAGE_SIZE = 9
+const PAGE_SIZE = 10
 
 type Doctor = {
   id: number
@@ -284,10 +285,47 @@ export default function DoctorsPage() {
   const loadDoctors = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/doctors')
-      if (!res.ok) throw new Error('Request failed')
-      const data = await res.json()
-      setDoctors(data)
+      // Query thẳng Supabase (được vì đây là bảng công khai, có policy cho phép
+      // đọc). Tách 4 truy vấn riêng rồi ghép ở client cho chắc chắn, thay vì
+      // dùng cú pháp embed phức tạp giữa bảng và 2 view.
+      const [doctorsRes, specialtyRes, facilityRes, statsRes] = await Promise.all([
+        supabase
+          .from('doctor')
+          .select('doctor_id, full_name, avatar_url, academic_title, specialty_id, experience_years, bio, is_accepting_bookings')
+          .order('full_name', { ascending: true }),
+        supabase.from('specialty').select('specialty_id, specialty_name'),
+        supabase.from('doctor_primary_facility').select('doctor_id, facility_name, address'),
+        supabase.from('doctor_stats').select('doctor_id, rating, total_reviews, total_patients'),
+      ])
+
+      if (doctorsRes.error) throw doctorsRes.error
+
+      const specialtyMap = new Map((specialtyRes.data || []).map((s: any) => [Number(s.specialty_id), s.specialty_name]))
+      const facilityMap = new Map((facilityRes.data || []).map((f: any) => [Number(f.doctor_id), f]))
+      const statsMap = new Map((statsRes.data || []).map((s: any) => [Number(s.doctor_id), s]))
+
+      const merged: Doctor[] = (doctorsRes.data || []).map((d: any) => {
+        const id = Number(d.doctor_id)
+        const facility = facilityMap.get(id)
+        const stats = statsMap.get(id)
+        return {
+          id,
+          fullName: d.full_name,
+          avatarUrl: d.avatar_url,
+          academicTitle: d.academic_title,
+          specialty: specialtyMap.get(Number(d.specialty_id)) || 'Chưa cập nhật',
+          experienceYears: d.experience_years,
+          bio: d.bio,
+          workplaceName: facility?.facility_name ?? null,
+          workplaceAddress: facility?.address ?? null,
+          rating: Number(stats?.rating ?? 0),
+          totalReviews: Number(stats?.total_reviews ?? 0),
+          totalPatients: Number(stats?.total_patients ?? 0),
+          isAcceptingBookings: d.is_accepting_bookings ? 1 : 0,
+        }
+      })
+
+      setDoctors(merged)
     } catch (err) {
       message.error('Không tải được danh sách bác sĩ, vui lòng thử lại')
     } finally {
@@ -318,7 +356,7 @@ export default function DoctorsPage() {
   const specialtyCount = useMemo(() => new Set(doctors.map((d) => d.specialty)).size, [doctors])
 
   return (
-    <PageLayout>
+    <PageLayout hideBackButton>
       <div className={beVietnamPro.className}>
         <style>{`
           @keyframes mc-float {
