@@ -48,7 +48,7 @@ export default function Header() {
         <div style={{ background: '#fff', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <HeartFilled style={{ color: '#2563eb', fontSize: 18 }} />
         </div>
-        <span style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>Medicare</span>
+        <span style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>HEALTHCONNECT</span>
       </Link>
 
       {user ? (

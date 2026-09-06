@@ -5,6 +5,7 @@ import { Form, Input, Button, message, Card } from 'antd'
 import { MailOutlined, LockOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { ArrowLeftOutlined } from '@ant-design/icons'
+import { loginUser } from '../../lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,7 +29,7 @@ export default function LoginPage() {
     <Link href="/" style={{ position: 'absolute', top: 24, left: 24, display: 'flex', alignItems: 'center', gap: 6, color: '#2563eb' }}>
       <ArrowLeftOutlined /> Về trang chủ
     </Link>
-    <Card style={{ width: 400 }} title="Đăng nhập Medicare">
+    <Card style={{ width: 400 }} title="Đăng nhập HEALTHCONNECT">
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Nhập email' }, { type: 'email', message: 'Email không hợp lệ' }]}>
             <Input prefix={<MailOutlined />} placeholder="email@example.com" />
