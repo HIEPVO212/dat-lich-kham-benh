@@ -85,3 +85,31 @@ export async function getCompletedPatientCount(): Promise<number> {
 
   return new Set((data ?? []).map((appointment) => appointment.patient_id)).size
 }
+export type AppointmentTrendPoint = { date: string; count: number }
+
+export async function getAppointmentsTrend(days = 7): Promise<AppointmentTrendPoint[]> {
+  const since = new Date()
+  since.setDate(since.getDate() - (days - 1))
+  since.setHours(0, 0, 0, 0)
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('created_at')
+    .gte('created_at', since.toISOString())
+
+  if (error) throw new Error(`Không thể tải xu hướng đặt lịch: ${error.message}`)
+
+  const buckets = new Map<string, number>()
+  for (let i = 0; i < days; i++) {
+    const day = new Date(since)
+    day.setDate(since.getDate() + i)
+    buckets.set(day.toISOString().slice(0, 10), 0)
+  }
+
+  for (const row of data ?? []) {
+    const key = String(row.created_at).slice(0, 10)
+    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1)
+  }
+
+  return Array.from(buckets.entries()).map(([date, count]) => ({ date, count }))
+}

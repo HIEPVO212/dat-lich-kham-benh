@@ -38,3 +38,17 @@ export async function getDoctors(): Promise<Doctor[]> {
     is_accepting_bookings: Boolean(doctor.is_accepting_bookings),
   }))
 }
+export type SpecialtyDoctorCount = { specialty_name: string; count: number }
+
+export async function getDoctorCountBySpecialty(): Promise<SpecialtyDoctorCount[]> {
+  const doctors = await getDoctors()
+  const counts = new Map<string, number>()
+
+  for (const doctor of doctors) {
+    counts.set(doctor.specialty_name, (counts.get(doctor.specialty_name) ?? 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .map(([specialty_name, count]) => ({ specialty_name, count }))
+    .sort((a, b) => b.count - a.count)
+}
