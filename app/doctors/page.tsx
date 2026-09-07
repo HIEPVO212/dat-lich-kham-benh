@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Be_Vietnam_Pro } from 'next/font/google'
 import { Input, Select, Button, Empty, Rate, Pagination, message } from 'antd'
 import { SearchOutlined, CalendarOutlined, EnvironmentOutlined, HeartOutlined, MedicineBoxOutlined } from '@ant-design/icons'
@@ -266,15 +267,21 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
 }
 
 export default function DoctorsPage() {
+  const searchParams = useSearchParams()
+  const requestedSpecialty = searchParams.get('specialty')
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')
-  const [specialty, setSpecialty] = useState('all')
+  const [specialty, setSpecialty] = useState(requestedSpecialty || 'all')
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     loadDoctors()
   }, [])
+
+  useEffect(() => {
+    setSpecialty(requestedSpecialty || 'all')
+  }, [requestedSpecialty])
 
   // Đổi từ khoá tìm/lọc thì quay về trang 1, tránh đứng ở trang trống
   useEffect(() => {
