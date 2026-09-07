@@ -111,41 +111,37 @@ function DoctorsContent() {
     const loadDoctors = async () => {
       setLoading(true)
       try {
-        // Lấy dữ liệu bác sĩ và thử lấy ở cả 2 bảng chuyên khoa cho chắc chắn
         const [doctorRes, specRes1, specRes2] = await Promise.all([
           supabase.from('doctor').select('*'),
           supabase.from('specialties').select('*'),
           supabase.from('specialty').select('*')
         ])
-
         if (doctorRes.error) throw doctorRes.error
-        
-        // Gộp dữ liệu chuyên khoa từ cả 2 bảng (phòng trường hợp bạn dùng lộn xộn)
         const allSpecs = [...(specRes1.data || []), ...(specRes2.data || [])]
 
-        const mapped = (doctorRes.data || []).map((d: any) => {
-          // Tìm tên chuyên khoa dựa trên specialty_id
+        const mapped: Doctor[] = (doctorRes.data || []).map((d: any) => {
           const s = allSpecs.find(item => (item.specialty_id === d.specialty_id || item.id === d.specialty_id))
-          // Lấy đúng cột tên (name hoặc specialty_name)
           const specName = s?.name || s?.specialty_name || `Chuyên khoa ${d.specialty_id}`
 
           return {
             id: d.doctor_id, 
-            fullName: d.full_name,
-            avatarUrl: d.avatar_url,
-            academicTitle: d.academic_title, // HIỆN ĐÚNG: Tiến sĩ, Thạc sĩ...
-            bio: d.bio, // HIỆN ĐÚNG: Tiểu sử bác sĩ
-            specialty: specName, // HIỆN ĐÚNG: Nội khoa, Nhi khoa...
+            fullName: d.full_name || 'Bác sĩ',
+            avatarUrl: d.avatar_url || null,
+            academicTitle: d.academic_title || null,
+            bio: d.bio || null,
+            specialty: specName,
             experienceYears: d.experience_years || 0,
-            rating: 5,
-            totalReviews: 0,
-            isAcceptingBookings: d.is_accepting_bookings === true ? 1 : 0
+            rating: d.rating || 5,
+            totalReviews: d.total_reviews || 0,
+            isAcceptingBookings: d.is_accepting_bookings === true ? 1 : 0,
+            workplaceName: d.workplace_name || null,
+            workplaceAddress: d.workplace_address || null,
+            totalPatients: d.total_patients || 0
           }
         })
-
         setDoctors(mapped)
       } catch (err) {
-        console.error("Lỗi:", err)
+        console.error(err)
         message.error('Lỗi tải dữ liệu bác sĩ')
       } finally {
         setLoading(false)
@@ -164,11 +160,11 @@ function DoctorsContent() {
   return (
     <PageLayout>
       <div className={beVietnamPro.className}>
-        <div className="mb-8 rounded-3xl bg-gradient-to-br from-blue-50 to-teal-50 p-10">
+        <div className="relative mb-8 rounded-3xl bg-gradient-to-br from-blue-50 to-teal-50 p-10">
            <h1 className="text-3xl font-extrabold text-slate-900">Danh sách bác sĩ</h1>
-           <p className="text-slate-500">Tìm kiếm bác sĩ chuyên khoa và đặt lịch.</p>
+           <p className="text-slate-500">Tìm bác sĩ và đặt lịch khám nhanh chóng.</p>
         </div>
-        <div className="mb-8 flex gap-3 p-3 bg-white border rounded-2xl">
+        <div className="mb-8 flex gap-3 p-3 bg-white border rounded-2xl shadow-sm">
           <Input placeholder="Tìm tên bác sĩ..." prefix={<SearchOutlined />} value={searchText} onChange={e => setSearchText(e.target.value)} style={{ maxWidth: 280 }} />
           <Select value={specialty} onChange={setSpecialty} style={{ minWidth: 200 }} options={[{label: 'Tất cả', value: 'all'}, ...Array.from(new Set(doctors.map(d => d.specialty))).map(s => ({label: s, value: s}))]} />
         </div>
