@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from './Header'
 import Sidebar from './Sidebar'
+import { CONTACT_INFO } from '../lib/contact'
 
 const { Content, Footer } = Layout
 
@@ -128,15 +129,15 @@ export default function PageLayout({ children, bare = false }: { children: React
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
                   <PhoneOutlined />
-                  <span>Hotline: 1900 1234</span>
+                  <span>Hotline: {CONTACT_INFO.hotline}</span>
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
                   <MailOutlined />
-                  <span>Email: support@healthconnect.vn</span>
+                  <span>Email: {CONTACT_INFO.email}</span>
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
                   <EnvironmentOutlined />
-                  <span>Địa chỉ: 123 Đường Lê Lợi, Q.1, TP.HCM</span>
+                  <span>Địa chỉ: {CONTACT_INFO.address}</span>
                 </li>
               </ul>
             </div>

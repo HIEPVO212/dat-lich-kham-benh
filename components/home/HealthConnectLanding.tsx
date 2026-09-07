@@ -1,23 +1,46 @@
 'use client'
 
 import Link from 'next/link'
-import { CONTACT_INFO } from '../../lib/contact'
+import { useEffect, useState } from 'react'
 import {
   ArrowRightOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseOutlined,
+  EnvironmentOutlined,
+  FacebookOutlined,
   HeartFilled,
   HeartOutlined,
+  InstagramOutlined,
+  MailOutlined,
+  MenuOutlined,
+  PhoneOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
+  StarFilled,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import { getSpecialties, type Specialty } from '../../lib/specialties'
+import { CONTACT_INFO } from '../../lib/contact'
+import { getDoctors, type Doctor } from '../../lib/doctors'
+import { getAppointmentsLast24Hours, getCompletedPatientCount, getLatestAppointment, type LatestAppointment } from '../../lib/appointments'
+import { createReview, getReviews, type Review } from '../../lib/reviews'
+import { supabase } from '../../lib/supabase'
+
+const navItems = [
+  { label: 'Trang chủ', href: '/' },
+  { label: 'Bác sĩ', href: '/doctors' },
+  { label: 'Đặt lịch khám', href: '/booking' },
+  { label: 'Dịch vụ', href: '/services' },
+  { label: 'Liên hệ', href: '/contact' },
+]
 
 const statHighlights = [
-  { value: '15k+', label: 'Bệnh nhân tin tưởng' },
-  { value: '120+', label: 'Bác sĩ chuyên khoa' },
-  { value: '4.9/5', label: 'Đánh giá trung bình' },
+  { value: '15k+', label: 'Bệnh nhân tin tưởng', icon: <UserOutlined className="text-cyan-600" /> },
+  { value: '57', label: 'Bác sĩ chuyên khoa', icon: <TeamOutlined className="text-emerald-600" /> },
+  { value: '4.9/5', label: 'Đánh giá trung bình', icon: <StarFilled className="text-amber-400" /> },
 ]
 
 const services = [
@@ -66,29 +89,7 @@ const steps = [
   },
 ]
 
-const doctors = [
-  {
-    name: 'BS. Minh Anh',
-    specialty: 'Tim mạch',
-    experience: '12 năm kinh nghiệm',
-    rating: '4.9',
-    accent: 'from-cyan-500 to-sky-600',
-  },
-  {
-    name: 'BS. Hoàng Nam',
-    specialty: 'Nội tổng quát',
-    experience: '10 năm kinh nghiệm',
-    rating: '4.8',
-    accent: 'from-emerald-500 to-teal-600',
-  },
-  {
-    name: 'BS. Thảo Vy',
-    specialty: 'Nhi khoa',
-    experience: '9 năm kinh nghiệm',
-    rating: '5.0',
-    accent: 'from-violet-500 to-purple-600',
-  },
-]
+const doctorAccents = ['from-cyan-500 to-sky-600', 'from-emerald-500 to-teal-600', 'from-violet-500 to-purple-600']
 
 const testimonials = [
   {
@@ -112,15 +113,15 @@ const testimonials = [
 ]
 
 
-const specialties = [
-  { name: 'Tiêu hóa', area: 'Phần khu 2', accent: 'from-cyan-500 to-sky-600' },
-  { name: 'Cơ xương khớp', area: 'Phần khu 2', accent: 'from-emerald-500 to-teal-600' },
-  { name: 'Hô hấp - Phần', area: 'khu 2', accent: 'from-violet-500 to-purple-600' },
-  { name: 'Nội tiết - Phần', area: 'khu 2', accent: 'from-amber-500 to-orange-600' },
-  { name: 'Tiết niệu - Phần', area: 'khu 2', accent: 'from-pink-500 to-rose-600' },
-  { name: 'Ung bướu - Phần', area: 'khu 2', accent: 'from-indigo-500 to-blue-700' },
-  { name: 'Truyền nhiễm - Phần', area: 'khu 2', accent: 'from-teal-500 to-cyan-600' },
-  { name: 'Tâm thần - Phần', area: 'khu 2', accent: 'from-fuchsia-500 to-violet-600' },
+const specialtyAccents = [
+  'from-cyan-500 to-sky-600',
+  'from-emerald-500 to-teal-600',
+  'from-violet-500 to-purple-600',
+  'from-amber-500 to-orange-600',
+  'from-pink-500 to-rose-600',
+  'from-indigo-500 to-blue-700',
+  'from-teal-500 to-cyan-600',
+  'from-fuchsia-500 to-violet-600',
 ]
 
 const faqs = [
@@ -139,8 +140,220 @@ const faqs = [
 ]
 
 export default function HealthConnectLanding() {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [specialties, setSpecialties] = useState<Specialty[]>([])
+  const [specialtiesLoading, setSpecialtiesLoading] = useState(true)
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null)
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [doctorsLoading, setDoctorsLoading] = useState(true)
+  const [doctorsError, setDoctorsError] = useState<string | null>(null)
+  const [doctorOffset, setDoctorOffset] = useState(0)
+  const [latestAppointment, setLatestAppointment] = useState<LatestAppointment | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewText, setReviewText] = useState('')
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewUser, setReviewUser] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [appointmentsLast24Hours, setAppointmentsLast24Hours] = useState(0)
+  const [completedPatientCount, setCompletedPatientCount] = useState(0)
+
+  useEffect(() => {
+    let isMounted = true
+
+    getSpecialties()
+      .then((data) => {
+        if (isMounted) {
+          setSpecialties(data)
+          setSpecialtiesError(null)
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setSpecialtiesError(error instanceof Error ? error.message : 'Không thể tải danh sách chuyên khoa.')
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setSpecialtiesLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    getAppointmentsLast24Hours()
+      .then(setAppointmentsLast24Hours)
+      .catch(() => setAppointmentsLast24Hours(0))
+
+    getCompletedPatientCount()
+      .then(setCompletedPatientCount)
+      .catch(() => setCompletedPatientCount(0))
+  }, [])
+
+  useEffect(() => {
+    Promise.all([
+      getReviews(),
+      supabase.auth.getUser(),
+    ])
+      .then(([loadedReviews, userResult]) => {
+        setReviews(loadedReviews)
+        setReviewUser(Boolean(userResult.data.user))
+      })
+      .catch(() => setReviews([]))
+  }, [])
+
+  const submitReview = async () => {
+    if (!reviewText.trim()) return
+    setReviewLoading(true)
+    try {
+      await createReview(reviewRating, reviewText.trim())
+      setReviews(await getReviews())
+      setReviewText('')
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Không thể gửi đánh giá.')
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    getLatestAppointment()
+      .then(setLatestAppointment)
+      .catch(() => setLatestAppointment(null))
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    getDoctors()
+      .then((data) => {
+        if (isMounted) {
+          setDoctors(data)
+          setDoctorsError(null)
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setDoctorsError(error instanceof Error ? error.message : 'Không thể tải danh sách bác sĩ.')
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setDoctorsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (doctors.length <= 3) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setDoctorOffset((current) => (current + 3) % doctors.length)
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [doctors.length])
+
+  const visibleDoctors = doctors.length
+    ? Array.from({ length: Math.min(3, doctors.length) }, (_, index) => doctors[(doctorOffset + index) % doctors.length])
+    : []
+  const appointmentDateLabel = latestAppointment
+    ? new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }).format(
+        new Date(`${latestAppointment.appointment_date}T00:00:00`),
+      )
+    : null
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <nav className="flex h-20 items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 shadow-lg shadow-cyan-500/20">
+                <HeartFilled className="text-lg text-white" />
+              </div>
+              <div>
+                <div className="text-lg font-black tracking-[0.22em] text-slate-900">HEALTHCONNECT</div>
+              </div>
+            </Link>
+
+            <div className="hidden items-center gap-8 md:flex">
+              {navItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="text-sm font-medium text-slate-600 transition hover:text-cyan-700"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+
+            <div className="hidden items-center gap-3 md:flex">
+              <Link
+                href="/login"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:text-cyan-700"
+              >
+                Đăng nhập
+              </Link>
+              <Link
+                href="/booking"
+                className="rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-600/30 transition hover:bg-cyan-700"
+              >
+                Đặt lịch
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Toggle menu"
+              onClick={() => setMobileOpen((value) => !value)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 md:hidden"
+            >
+              {mobileOpen ? <CloseOutlined /> : <MenuOutlined />}
+            </button>
+          </nav>
+
+          {mobileOpen && (
+            <div className="space-y-3 border-t border-slate-200 pb-4 pt-4 md:hidden">
+              {navItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="block rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-cyan-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <Link
+                  href="/login"
+                  className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-700"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  href="/booking"
+                  className="flex-1 rounded-full bg-cyan-600 px-4 py-2 text-center text-sm font-semibold text-white"
+                >
+                  Đặt lịch
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+
       <main>
         <section className="relative overflow-hidden bg-gradient-to-br from-cyan-50 via-white to-emerald-50">
           <div className="absolute left-[-120px] top-16 h-72 w-72 rounded-full bg-cyan-200/60 blur-3xl" />
@@ -177,10 +390,47 @@ export default function HealthConnectLanding() {
                 </Link>
               </div>
 
+              <div className="mt-7 space-y-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 font-medium">
+                  <CalendarOutlined className="text-cyan-600" />
+                  <span>
+                    <strong className="text-slate-900">{appointmentsLast24Hours.toLocaleString('vi-VN')}</strong>{' '}
+                    lượt đặt lịch trong 24 giờ qua
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {reviews.slice(0, 4).map((review) => (
+                      <span
+                        key={review.id}
+                        title={review.full_name}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-cyan-100 text-xs font-bold text-cyan-700"
+                      >
+                        <UserOutlined />
+                      </span>
+                    ))}
+                  </div>
+                  <span>
+                    <strong className="text-slate-900">
+                      {reviews.length ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1) : '0.0'}
+                    </strong>
+                    <span className="ml-1 text-amber-400">★★★★★</span>
+                    <span className="ml-1">từ {reviews.length.toLocaleString('vi-VN')} bệnh nhân</span>
+                  </span>
+                </div>
+              </div>
+
               <div className="mt-10 grid max-w-lg gap-6 sm:grid-cols-3">
                 {statHighlights.map((item) => (
                   <div key={item.label} className="rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur-sm">
-                    <div className="text-2xl font-black text-slate-900">{item.value}</div>
+                    <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg shadow-sm">
+                      {item.icon}
+                    </div>
+                    <div className="text-2xl font-black text-slate-900">
+                      {item.label === 'Bệnh nhân tin tưởng'
+                        ? completedPatientCount.toLocaleString('vi-VN')
+                        : item.value}
+                    </div>
                     <div className="mt-1 text-xs text-slate-600">{item.label}</div>
                   </div>
                 ))}
@@ -196,7 +446,7 @@ export default function HealthConnectLanding() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-cyan-50">Đặt lịch hôm nay</div>
-                      <div className="mt-2 text-3xl font-black">08:30</div>
+                      <div className="mt-2 text-3xl font-black">{latestAppointment?.appointment_time ?? '--:--'}</div>
                     </div>
                     <div className="rounded-2xl bg-white/15 p-3">
                       <CalendarOutlined className="text-2xl" />
@@ -206,11 +456,23 @@ export default function HealthConnectLanding() {
                   <div className="mt-8 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-lg font-bold">
-                        BA
+                        {latestAppointment
+                          ? latestAppointment.doctor_name
+                              .split(' ')
+                              .slice(-2)
+                              .map((word) => word[0])
+                              .join('')
+                          : '--'}
                       </div>
                       <div>
-                        <div className="font-semibold">BS. Minh Anh</div>
-                        <div className="text-sm text-cyan-50/90">Tim mạch - Chuyên khoa</div>
+                        <div className="font-semibold">
+                          {latestAppointment
+                            ? `${latestAppointment.doctor_title ? `${latestAppointment.doctor_title} ` : ''}${latestAppointment.doctor_name}`
+                            : 'Chưa có lịch hẹn'}
+                        </div>
+                        <div className="text-sm text-cyan-50/90">
+                          {latestAppointment?.specialty_name ?? 'Đặt lịch để xem thông tin tại đây'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -227,23 +489,27 @@ export default function HealthConnectLanding() {
                   <div className="space-y-3">
                     <div className="rounded-xl border border-slate-200 bg-white p-3">
                       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Chuyên khoa</div>
-                      <div className="mt-2 font-semibold text-slate-800">Khám tim mạch</div>
+                      <div className="mt-2 font-semibold text-slate-800">
+                        {latestAppointment?.specialty_name ?? 'Chưa có lịch hẹn'}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-white p-3">
                       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Ngày khám</div>
-                      <div className="mt-2 font-semibold text-slate-800">Thứ Sáu, 12/09</div>
+                      <div className="mt-2 font-semibold capitalize text-slate-800">
+                        {appointmentDateLabel ?? 'Chưa có lịch hẹn'}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 flex items-center justify-between rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
                   <div>
-                    <div className="text-sm text-cyan-700">Tỷ lệ phản hồi</div>
-                    <div className="mt-1 text-xl font-black text-slate-900">96%</div>
+                    <div className="text-sm text-cyan-700">Hỗ trợ bệnh nhân</div>
+                    <div className="mt-1 text-xl font-black text-slate-900">24/7</div>
                   </div>
                   <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-emerald-600">
                     <CheckCircleOutlined />
-                    Xác nhận nhanh
+                    Luôn sẵn sàng
                   </div>
                 </div>
               </div>
@@ -254,32 +520,46 @@ export default function HealthConnectLanding() {
         <section className="mx-auto max-w-7xl px-4 pb-4 pt-2 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-center justify-between gap-4">
             <h2 className="text-3xl font-black text-slate-900">Chuyên khoa phổ biến</h2>
-            <Link href="/doctors" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-800">
+            <Link href="/chuyen-khoa" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-800">
               Xem tất cả →
             </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-            {specialties.map((specialty) => (
-              <div
-                key={specialty.name}
-                className="group rounded-[22px] border border-slate-200 bg-white p-4 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-lg"
-              >
-                <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br ${specialty.accent} shadow-lg`}>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[10px] font-black text-slate-700">
-                    {specialty.name
-                      .split(' ')
-                      .slice(0, 2)
-                      .map((word) => word[0])
-                      .join('')
-                      .slice(0, 2)}
+          {specialtiesLoading && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
+              Đang tải danh sách chuyên khoa...
+            </div>
+          )}
+
+          {specialtiesError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+              {specialtiesError}
+            </div>
+          )}
+
+          {!specialtiesLoading && !specialtiesError && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+              {specialties.slice(0, 6).map((specialty, index) => (
+                <div
+                  key={specialty.specialty_id}
+                  className="group rounded-[22px] border border-slate-200 bg-white p-4 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-lg"
+                >
+                  <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br ${specialtyAccents[index % specialtyAccents.length]} shadow-lg`}>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[10px] font-black text-slate-700">
+                      {specialty.specialty_name
+                        .split(' ')
+                        .slice(0, 2)
+                        .map((word) => word[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </div>
                   </div>
+                  <div className="text-sm font-bold text-slate-900">{specialty.specialty_name}</div>
+                  <div className="mt-1 line-clamp-2 text-[11px] text-slate-500">{specialty.description}</div>
                 </div>
-                <div className="text-sm font-bold text-slate-900">{specialty.name}</div>
-                <div className="mt-1 text-[11px] text-slate-500">{specialty.area}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
@@ -298,27 +578,47 @@ export default function HealthConnectLanding() {
             </Link>
           </div>
 
+          {doctorsLoading && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
+              Đang tải danh sách bác sĩ...
+            </div>
+          )}
+
+          {doctorsError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+              {doctorsError}
+            </div>
+          )}
+
+          {!doctorsLoading && !doctorsError && (
           <div className="grid gap-6 lg:grid-cols-3">
-            {doctors.map((doctor) => (
-              <div key={doctor.name} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-                <div className={`h-40 bg-gradient-to-br ${doctor.accent}`} />
+            {visibleDoctors.map((doctor, index) => (
+              <div key={doctor.doctor_id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                <div className={`h-40 bg-gradient-to-br ${doctorAccents[index % doctorAccents.length]}`} />
                 <div className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-lg font-black text-slate-700">
-                      {doctor.name
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-lg font-black text-slate-700">
+                      {doctor.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={doctor.avatar_url} alt={doctor.full_name} className="h-full w-full object-cover" />
+                      ) : (
+                        doctor.full_name
                         .split(' ')
                         .slice(-2)
                         .map((word) => word[0])
-                        .join('')}
+                        .join('')
+                      )}
                     </div>
-                    <div className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      {doctor.rating} ★
+                    <div className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.is_accepting_bookings ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {doctor.is_accepting_bookings ? 'Đang nhận lịch' : 'Tạm kín lịch'}
                     </div>
                   </div>
 
-                  <h3 className="mt-5 text-xl font-bold text-slate-900">{doctor.name}</h3>
-                  <div className="mt-2 text-base font-medium text-cyan-700">{doctor.specialty}</div>
-                  <p className="mt-3 text-sm text-slate-600">{doctor.experience}</p>
+                  <h3 className="mt-5 text-xl font-bold text-slate-900">
+                    {doctor.academic_title ? `${doctor.academic_title} ` : ''}{doctor.full_name}
+                  </h3>
+                  <div className="mt-2 text-base font-medium text-cyan-700">{doctor.specialty_name}</div>
+                  <p className="mt-3 text-sm text-slate-600">{doctor.experience_years} năm kinh nghiệm</p>
 
                   <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
                     <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -333,6 +633,7 @@ export default function HealthConnectLanding() {
               </div>
             ))}
           </div>
+          )}
         </section>
 
         <section className="bg-slate-900 py-20 text-white">
@@ -381,29 +682,46 @@ export default function HealthConnectLanding() {
             </div>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {testimonials.map((testimonial) => (
-                <div key={testimonial.name} className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+              {reviews.slice(0, 3).map((testimonial) => (
+                <div key={testimonial.id} className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
                   <div className="mb-5 flex items-center justify-between">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100 text-lg font-black text-cyan-700">
-                      {testimonial.name
+                      {testimonial.full_name
                         .split(' ')
                         .map((word) => word[0])
                         .join('')
                         .slice(0, 2)}
                     </div>
                     <div className="flex gap-1 text-amber-400">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <span key={`${testimonial.name}-${index}`}>★</span>
+                      {Array.from({ length: testimonial.rating }).map((_, index) => (
+                        <span key={`${testimonial.id}-${index}`}>★</span>
                       ))}
                     </div>
                   </div>
 
-                  <p className="text-base leading-7 text-slate-600">“{testimonial.quote}”</p>
+                  <p className="text-base leading-7 text-slate-600">“{testimonial.content}”</p>
 
                   <div className="mt-6 border-t border-slate-200 pt-4">
-                    <div className="font-bold text-slate-900">{testimonial.name}</div>
-                    <div className="text-sm text-slate-500">{testimonial.role}</div>
+                    <div className="font-bold text-slate-900">{testimonial.full_name}</div>
+                    <div className="text-sm text-slate-500">Bệnh nhân</div>
                   </div>
+                  {reviews.length === 0 && (
+                    <p className="mt-8 text-center text-slate-500">Chưa có đánh giá nào. Hãy là người đầu tiên chia sẻ trải nghiệm.</p>
+                  )}
+                  {reviewUser && (
+                    <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-cyan-100 bg-cyan-50 p-5">
+                      <h3 className="font-bold text-slate-900">Chia sẻ trải nghiệm của bạn</h3>
+                      <div className="mt-3 flex gap-2">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <button key={index} type="button" onClick={() => setReviewRating(index + 1)} className={index < reviewRating ? 'text-amber-400' : 'text-slate-300'}>★</button>
+                        ))}
+                      </div>
+                      <textarea value={reviewText} onChange={(event) => setReviewText(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3" rows={3} placeholder="Nhập đánh giá của bạn..." />
+                      <button type="button" onClick={submitReview} disabled={reviewLoading || !reviewText.trim()} className="mt-3 rounded-full bg-cyan-600 px-5 py-2 font-semibold text-white disabled:opacity-50">
+                        {reviewLoading ? 'Đang gửi...' : 'Gửi đánh giá'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -412,16 +730,101 @@ export default function HealthConnectLanding() {
 
       </main>
 
-      <footer id="contact" className="bg-slate-950 py-10 text-slate-300">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700">
-              <HeartFilled className="text-lg text-white" />
+      <footer id="contact" className="bg-slate-950 py-12 text-slate-300">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.5fr_1fr_1.2fr_1.5fr] lg:px-8">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 shadow-lg shadow-cyan-500/30">
+                <HeartFilled className="text-lg text-white" />
+              </div>
+              <div className="text-lg font-black tracking-[0.22em] text-white">HEALTHCONNECT</div>
             </div>
-            <div className="text-lg font-black tracking-[0.22em] text-white">HEALTHCONNECT</div>
+            <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
+              Nền tảng kết nối bệnh nhân và bác sĩ, giúp việc đặt lịch khám trở nên đơn giản và thuận tiện.
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300">
+                <FacebookOutlined />
+              </a>
+              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300">
+                <InstagramOutlined />
+              </a>
+            </div>
           </div>
-          <div className="text-sm text-slate-400">© 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.</div>
-          <div className="text-sm text-slate-400">Hỗ trợ 24/7 • hotline {CONTACT_INFO.hotline}</div>
+
+          <div>
+            <h3 className="text-base font-bold text-white">Về HEALTHCONNECT</h3>
+            <ul className="mt-4 space-y-3 text-sm text-slate-400">
+              <li>
+                <Link href="/about" className="transition hover:text-cyan-300">
+                  Về chúng tôi
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="transition hover:text-cyan-300">
+                  Chính sách bảo mật
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="transition hover:text-cyan-300">
+                  Điều khoản sử dụng
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-white">Liên kết nhanh</h3>
+            <ul className="mt-4 space-y-3 text-sm text-slate-400">
+              <li>
+                <Link href="/" className="transition hover:text-cyan-300">
+                  Trang chủ
+                </Link>
+              </li>
+              <li>
+                <Link href="/doctors" className="transition hover:text-cyan-300">
+                  Bác sĩ
+                </Link>
+              </li>
+              <li>
+                <Link href="/chuyen-khoa" className="transition hover:text-cyan-300">
+                  Chuyên khoa
+                </Link>
+              </li>
+              <li>
+                <Link href="/booking" className="transition hover:text-cyan-300">
+                  Đặt lịch khám
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="transition hover:text-cyan-300">
+                  Liên hệ
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-white">Thông tin liên hệ</h3>
+            <ul className="mt-4 space-y-3 text-sm text-slate-400">
+              <li className="flex items-center gap-2">
+                <PhoneOutlined className="text-cyan-300" />
+                <span>Hotline: {CONTACT_INFO.hotline}</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <MailOutlined className="text-cyan-300" />
+                <span>Email: {CONTACT_INFO.email}</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <EnvironmentOutlined className="text-cyan-300" />
+                <span>Địa chỉ: {CONTACT_INFO.address}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-8 max-w-7xl border-t border-slate-800 px-4 pt-6 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
+          © 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.
         </div>
       </footer>
     </div>
