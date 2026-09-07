@@ -46,21 +46,25 @@ const statHighlights = [
 const services = [
   {
     title: 'Khám tổng quát',
+    href: '/booking',
     description: 'Tổng kết sức khỏe, tư vấn hướng điều trị và theo dõi định kỳ.',
     icon: <HeartOutlined className="text-3xl text-cyan-600" />,
   },
   {
     title: 'Khám chuyên khoa',
+    href: '/chuyen-khoa',
     description: 'Đội ngũ bác sĩ chuyên khoa từ tim mạch, nội tổng quát đến nhi khoa.',
     icon: <HeartFilled className="text-3xl text-rose-500" />,
   },
   {
     title: 'Đặt lịch nhanh',
+    href: '/booking',
     description: 'Chọn bác sĩ, khung giờ và nhận thông báo xác nhận ngay trong vài phút.',
     icon: <CalendarOutlined className="text-3xl text-emerald-600" />,
   },
   {
     title: 'Bảo mật thông tin',
+    href: '/privacy',
     description: 'Quy trình dữ liệu minh bạch, lưu trữ an toàn và kiểm soát quyền truy cập.',
     icon: <SafetyCertificateOutlined className="text-3xl text-violet-600" />,
   },
@@ -453,7 +457,7 @@ export default function HealthConnectLanding() {
                     </div>
                   </div>
 
-                  <div className="mt-8 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+                  <Link href={latestAppointment ? '/appointments' : '/booking'} className="mt-8 block rounded-2xl bg-white/10 p-4 backdrop-blur-sm transition hover:bg-white/20">
                     <div className="flex items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-lg font-bold">
                         {latestAppointment
@@ -475,7 +479,7 @@ export default function HealthConnectLanding() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
 
                 <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -487,18 +491,18 @@ export default function HealthConnectLanding() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <Link href="/chuyen-khoa" className="block rounded-xl border border-slate-200 bg-white p-3 transition hover:border-cyan-300 hover:shadow-sm">
                       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Chuyên khoa</div>
                       <div className="mt-2 font-semibold text-slate-800">
                         {latestAppointment?.specialty_name ?? 'Chưa có lịch hẹn'}
                       </div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    </Link>
+                    <Link href={latestAppointment ? '/appointments' : '/booking'} className="block rounded-xl border border-slate-200 bg-white p-3 transition hover:border-cyan-300 hover:shadow-sm">
                       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Ngày khám</div>
                       <div className="mt-2 font-semibold capitalize text-slate-800">
                         {appointmentDateLabel ?? 'Chưa có lịch hẹn'}
                       </div>
-                    </div>
+                    </Link>
                   </div>
                 </div>
 
@@ -540,8 +544,9 @@ export default function HealthConnectLanding() {
           {!specialtiesLoading && !specialtiesError && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
               {specialties.slice(0, 6).map((specialty, index) => (
-                <div
+                <Link
                   key={specialty.specialty_id}
+                  href={`/doctors?specialty=${encodeURIComponent(specialty.specialty_name)}`}
                   className="group rounded-[22px] border border-slate-200 bg-white p-4 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-lg"
                 >
                   <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br ${specialtyAccents[index % specialtyAccents.length]} shadow-lg`}>
@@ -556,10 +561,42 @@ export default function HealthConnectLanding() {
                   </div>
                   <div className="text-sm font-bold text-slate-900">{specialty.specialty_name}</div>
                   <div className="mt-1 line-clamp-2 text-[11px] text-slate-500">{specialty.description}</div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
+        </section>
+
+        <section className="bg-white py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <div className="inline-flex rounded-full bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700">
+                Dịch vụ tiêu biểu
+              </div>
+              <h2 className="mt-5 text-3xl font-black text-slate-900 sm:text-4xl">
+                Chăm sóc sức khỏe thuận tiện hơn mỗi ngày
+              </h2>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              {services.map((service) => (
+                <Link
+                  key={service.title}
+                  href={service.href}
+                  className="group rounded-[28px] border border-slate-200 bg-slate-50 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:bg-white hover:shadow-xl"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm transition group-hover:scale-105">
+                    {service.icon}
+                  </div>
+                  <h3 className="mt-6 text-xl font-bold text-slate-900">{service.title}</h3>
+                  <p className="mt-3 text-base leading-7 text-slate-600">{service.description}</p>
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-cyan-700">
+                    Xem thêm <ArrowRightOutlined />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
@@ -625,7 +662,7 @@ export default function HealthConnectLanding() {
                       <UserOutlined />
                       Đặt khám ngay
                     </div>
-                    <Link href="/booking" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                    <Link href={`/booking?doctorId=${doctor.doctor_id}`} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
                       Đặt lịch
                     </Link>
                   </div>
