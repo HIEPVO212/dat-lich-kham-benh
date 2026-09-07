@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, Suspense, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Be_Vietnam_Pro } from 'next/font/google'
-import { Input, Select, Button, Empty, Rate, Pagination, message } from 'antd'
+import { Input, Select, Button, Empty, Rate, Pagination, message, Spin } from 'antd'
 import { SearchOutlined, CalendarOutlined, EnvironmentOutlined, HeartOutlined, MedicineBoxOutlined } from '@ant-design/icons'
 import PageLayout from '../../components/PageLayout'
+import { supabase } from '../../lib/supabase'
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
@@ -62,29 +63,18 @@ function StatPill({ value, label }: { value: number; label: string }) {
   )
 }
 
-// 1 lượt nội dung của dải chữ chạy — được render nhiều lần liên tiếp để tạo
-// vòng lặp liền mạch (hết bản này thì bản kế tiếp vừa vặn thế chỗ, không giật).
 function MarqueeContent() {
   return (
     <span className="inline-flex shrink-0 items-center gap-2.5 pr-10 text-sm text-slate-600">
       <HeartOutlined className="text-rose-500" />
-      <span>
-        <b className="font-semibold text-blue-700">Tôn trọng người bệnh:</b> Hãy coi người bệnh như người thân ruột thịt của mình.
-      </span>
+      <span><b className="font-semibold text-blue-700">Tôn trọng người bệnh:</b> Hãy coi người bệnh như người thân ruột thịt.</span>
       <span className="text-teal-400">✦</span>
-      <span>
-        <b className="font-semibold text-teal-700">Đặt sức khỏe lên trên hết:</b> Lương y như từ mẫu.
-      </span>
+      <span><b className="font-semibold text-teal-700">Đặt sức khỏe lên trên hết:</b> Lương y như từ mẫu.</span>
       <span className="text-rose-300">✦</span>
-      <span>
-        <b className="font-semibold text-rose-700">Trung thực và tận tụy:</b> Người bác sĩ giỏi không chỉ chữa trị căn bệnh, mà là chữa trị người bệnh.
-      </span>
-      <span className="text-blue-300">✦</span>
     </span>
   )
 }
 
-// Icon chữ thập y tế vẽ bằng div thuần, không phụ thuộc bộ icon nào
 function CrossIcon() {
   return (
     <div className="relative h-4 w-4">
@@ -94,34 +84,11 @@ function CrossIcon() {
   )
 }
 
-// Badge icon "nổi 3D": nền gradient + lớp sáng hắt ở góc trên (giả lập ánh sáng
-// phản chiếu) + đổ bóng sâu + animation bồng bềnh chậm — tạo cảm giác vật thể
-// đang lơ lửng trong không gian 3D, không cần thư viện 3D nào.
-function FloatingBadge({
-  children,
-  className = '',
-  delay = '0s',
-  size = 52,
-}: {
-  children: ReactNode
-  className?: string
-  delay?: string
-  size?: number
-}) {
+function FloatingBadge({ children, className = '', delay = '0s', size = 52 }: { children: ReactNode, className?: string, delay?: string, size?: number }) {
   return (
-    <div
-      className={`pointer-events-none absolute items-center justify-center rounded-2xl ${className}`}
-      style={{
-        width: size,
-        height: size,
-        animation: `mc-float 5s ease-in-out ${delay} infinite`,
-        boxShadow: '0 16px 30px -10px rgba(15,23,42,0.35)',
-      }}
-    >
+    <div className={`pointer-events-none absolute items-center justify-center rounded-2xl ${className}`} style={{ width: size, height: size, animation: `mc-float 5s ease-in-out ${delay} infinite`, boxShadow: '0 16px 30px -10px rgba(15,23,42,0.35)' }}>
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/45 to-transparent" />
-      <div className="relative text-white" style={{ fontSize: size * 0.4 }}>
-        {children}
-      </div>
+      <div className="relative text-white" style={{ fontSize: size * 0.4 }}>{children}</div>
     </div>
   )
 }
@@ -140,125 +107,30 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
     setTilt({ rx: (0.5 - py) * 12, ry: (px - 0.5) * 12 })
     setGlare({ x: px * 100, y: py * 100 })
   }
-  const resetTilt = () => {
-    setTilt({ rx: 0, ry: 0 })
-    setGlare({ x: 50, y: 50 })
-  }
+  const resetTilt = () => { setTilt({ rx: 0, ry: 0 }); setGlare({ x: 50, y: 50 }); }
 
   return (
     <div style={{ perspective: '1000px' }}>
-      <div
-        onMouseMove={handleMouseMove}
-        onMouseLeave={resetTilt}
-        style={{
-          transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
-          transition: 'transform 200ms ease-out, box-shadow 200ms ease-out',
-        }}
-        className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br ${theme.tint} to-white p-6 shadow-[0_4px_20px_rgba(15,23,42,0.06)]`}
-      >
-        {/* glow màu theo chuyên khoa, hiện khi hover thay cho bóng xám mặc định */}
-        <div
-          className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-          style={{ boxShadow: `0 25px 45px -15px ${theme.shadow}` }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-          style={{ background: `radial-gradient(500px circle at ${glare.x}% ${glare.y}%, rgba(255,255,255,0.55), transparent 60%)` }}
-        />
-
-        <div className="absolute right-5 top-5 flex items-center gap-1.5">
-          <span className="relative flex h-2.5 w-2.5">
-            {accepting && (
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            )}
-            <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${accepting ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-          </span>
-        </div>
-
+      <div onMouseMove={handleMouseMove} onMouseLeave={resetTilt} style={{ transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`, transition: 'transform 200ms ease-out' }} className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-gradient-to-br ${theme.tint} to-white p-6`}>
         <div className="relative flex gap-4">
-          <div
-            className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${theme.grad} text-xl font-bold text-white shadow-lg`}
-          >
-            {doctor.avatarUrl && !imgError ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={doctor.avatarUrl}
-                onError={() => setImgError(true)}
-                alt={doctor.fullName}
-                className="h-full w-full object-cover object-top"
-              />
-            ) : (
-              getInitials(doctor.fullName)
-            )}
+          <div className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${theme.grad} text-xl font-bold text-white`}>
+            {doctor.avatarUrl && !imgError ? <img src={doctor.avatarUrl} onError={() => setImgError(true)} alt={doctor.fullName} className="h-full w-full object-cover object-top" /> : getInitials(doctor.fullName)}
           </div>
-
-          <div className="min-w-0 flex-1 pr-6">
-            <h3 className="truncate text-base font-bold text-slate-900">
-              {doctor.academicTitle ? `${doctor.academicTitle} ` : ''}
-              {doctor.fullName}
-            </h3>
-            <span
-              className={`mt-1.5 inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${theme.tagBg} ${theme.tagText} ${theme.tagBorder}`}
-            >
-              {doctor.specialty}
-            </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-bold text-slate-900">{doctor.academicTitle} {doctor.fullName}</h3>
+            <span className={`mt-1.5 inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${theme.tagBg} ${theme.tagText}`}>{doctor.specialty}</span>
           </div>
         </div>
-
-        <div className="relative mt-4 flex flex-wrap items-center gap-1.5">
-          {doctor.totalReviews > 0 ? (
-            <>
-              <Rate disabled allowHalf value={doctor.rating} style={{ fontSize: 13, color: '#F59E0B' }} />
-              <span className="text-xs font-medium text-slate-500">
-                {doctor.rating.toFixed(1)} · {doctor.totalReviews} đánh giá
-              </span>
-            </>
-          ) : (
-            <span className="text-xs font-medium text-slate-400">Chưa có đánh giá</span>
-          )}
+        <div className="relative mt-4 flex items-center gap-1.5">
+          <Rate disabled allowHalf value={doctor.rating} style={{ fontSize: 13, color: '#F59E0B' }} />
+          <span className="text-xs text-slate-500">{doctor.rating} · {doctor.totalReviews} đánh giá</span>
         </div>
-
-        <p className="relative mt-3 line-clamp-2 text-sm leading-relaxed text-slate-500">
-          {doctor.bio || 'Bác sĩ chưa cập nhật thông tin giới thiệu.'}
-        </p>
-
-        <div className="relative mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-center">
-          <div>
-            <div className="text-lg font-extrabold text-slate-900">{doctor.experienceYears}</div>
-            <div className="text-[11px] text-slate-500">năm kinh nghiệm</div>
-          </div>
-          <div>
-            <div className="text-lg font-extrabold text-slate-900">{doctor.totalPatients}</div>
-            <div className="text-[11px] text-slate-500">bệnh nhân đã khám</div>
-          </div>
-        </div>
-
-        {doctor.workplaceName && (
-          <div className="relative mt-4 flex items-start gap-1.5 text-xs text-slate-500">
-            <EnvironmentOutlined className="mt-0.5" />
-            <div>
-              <div className="font-medium text-slate-700">{doctor.workplaceName}</div>
-              {doctor.workplaceAddress && <div>{doctor.workplaceAddress}</div>}
-            </div>
-          </div>
-        )}
-
-        <div className="relative mt-auto pt-5">
+        <p className="mt-3 line-clamp-2 text-sm text-slate-500">{doctor.bio || 'Bác sĩ chưa cập nhật giới thiệu.'}</p>
+        <div className="mt-auto pt-5">
           {accepting ? (
-            <Link href={`/booking?doctorId=${doctor.id}`}>
-              <Button
-                type="primary"
-                icon={<CalendarOutlined />}
-                block
-                style={{ height: 40, borderRadius: 12, border: 'none', background: theme.hex[0], fontWeight: 600 }}
-              >
-                Đặt lịch khám
-              </Button>
-            </Link>
+            <Link href={`/booking?doctorId=${doctor.id}`}><Button type="primary" icon={<CalendarOutlined />} block style={{ height: 40, borderRadius: 12, background: theme.hex[0] }}>Đặt lịch khám</Button></Link>
           ) : (
-            <Button block disabled style={{ height: 40, borderRadius: 12 }}>
-              Không nhận lịch
-            </Button>
+            <Button block disabled style={{ height: 40, borderRadius: 12 }}>Hết lịch</Button>
           )}
         </div>
       </div>
@@ -266,7 +138,8 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   )
 }
 
-export default function DoctorsPage() {
+// TÁCH NỘI DUNG CHÍNH RA ĐỂ DÙNG SUSPENSE
+function DoctorsContent() {
   const searchParams = useSearchParams()
   const requestedSpecialty = searchParams.get('specialty')
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -276,204 +149,55 @@ export default function DoctorsPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
+    const loadDoctors = async () => {
+      setLoading(true)
+      try {
+        const { data, error } = await supabase.from('doctors').select('*').order('id')
+        if (error) throw error
+        setDoctors(data || [])
+      } catch (err) { message.error('Lỗi tải dữ liệu bác sĩ') }
+      finally { setLoading(false) }
+    }
     loadDoctors()
   }, [])
 
-  useEffect(() => {
-    setSpecialty(requestedSpecialty || 'all')
-  }, [requestedSpecialty])
-
-  // Đổi từ khoá tìm/lọc thì quay về trang 1, tránh đứng ở trang trống
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchText, specialty])
-
-  const loadDoctors = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/doctors')
-      if (!res.ok) throw new Error('Request failed')
-      const data = await res.json()
-      setDoctors(data)
-    } catch (err) {
-      message.error('Không tải được danh sách bác sĩ, vui lòng thử lại')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const specialtyOptions = useMemo(() => {
-    const unique = Array.from(new Set(doctors.map((d) => d.specialty).filter(Boolean)))
-    return [{ label: 'Tất cả chuyên khoa', value: 'all' }, ...unique.map((s) => ({ label: s, value: s }))]
-  }, [doctors])
+  useEffect(() => { setSpecialty(requestedSpecialty || 'all') }, [requestedSpecialty])
+  useEffect(() => { setCurrentPage(1) }, [searchText, specialty])
 
   const filteredDoctors = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
-    return doctors.filter((d) => {
-      const matchName = d.fullName.toLowerCase().includes(keyword)
-      const matchSpecialty = specialty === 'all' || d.specialty === specialty
-      return matchName && matchSpecialty
-    })
+    return doctors.filter((d) => (d.fullName.toLowerCase().includes(keyword)) && (specialty === 'all' || d.specialty === specialty))
   }, [doctors, searchText, specialty])
 
-  const pagedDoctors = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredDoctors.slice(start, start + PAGE_SIZE)
-  }, [filteredDoctors, currentPage])
-
-  const acceptingCount = useMemo(() => doctors.filter((d) => d.isAcceptingBookings === 1).length, [doctors])
-  const specialtyCount = useMemo(() => new Set(doctors.map((d) => d.specialty)).size, [doctors])
+  const pagedDoctors = useMemo(() => filteredDoctors.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), [filteredDoctors, currentPage])
 
   return (
     <PageLayout>
       <div className={beVietnamPro.className}>
-        <style>{`
-          @keyframes mc-float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-12px) rotate(4deg); }
-          }
-          @keyframes mc-marquee {
-            from { transform: translateX(0); }
-            to { transform: translateX(-50%); }
-          }
-          .mc-marquee-track:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
-
-        {/* Hero — phong cách y tế: lớp gradient nhiều tầng tạo chiều sâu,
-            đường EKG mờ phía sau, các icon y tế "nổi 3D" lơ lửng góc phải */}
-        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 via-white to-teal-50 px-8 py-10">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-blue-400/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 -left-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
-          <div className="pointer-events-none absolute right-1/3 top-0 h-40 w-40 rounded-full bg-rose-300/20 blur-2xl" />
-
-          <svg
-            className="pointer-events-none absolute inset-x-0 bottom-4 h-16 w-full opacity-20"
-            viewBox="0 0 800 60"
-            preserveAspectRatio="none"
-          >
-            <polyline
-              points="0,32 130,32 152,10 175,52 198,32 640,32 660,6 682,56 704,32 800,32"
-              fill="none"
-              stroke="#1D4ED8"
-              strokeWidth="2.5"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          </svg>
-
-          <FloatingBadge className="right-8 top-6 flex bg-gradient-to-br from-rose-400 to-rose-600">
-            <CrossIcon />
-          </FloatingBadge>
-          <FloatingBadge
-            className="right-28 top-20 hidden sm:flex bg-gradient-to-br from-blue-400 to-indigo-600"
-            delay="1.3s"
-            size={44}
-          >
-            <MedicineBoxOutlined />
-          </FloatingBadge>
-          <FloatingBadge
-            className="right-2 top-36 hidden md:flex bg-gradient-to-br from-teal-400 to-cyan-600"
-            delay="0.7s"
-            size={36}
-          >
-            <HeartOutlined />
-          </FloatingBadge>
-
-          <div className="relative">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Danh sách bác sĩ
-            </h1>
-            <p className="mt-2 max-w-xl text-slate-500">
-              Tìm và chọn bác sĩ phù hợp, đặt lịch khám chỉ trong vài bước
-            </p>
-            {!loading && doctors.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-8">
-                <StatPill value={doctors.length} label="bác sĩ" />
-                <StatPill value={specialtyCount} label="chuyên khoa" />
-                <StatPill value={acceptingCount} label="đang nhận lịch" />
-              </div>
-            )}
-          </div>
+        <style>{`@keyframes mc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } } @keyframes mc-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
+        <div className="relative mb-8 rounded-3xl bg-gradient-to-br from-blue-50 to-teal-50 p-10 overflow-hidden">
+           <h1 className="text-3xl font-extrabold text-slate-900">Danh sách bác sĩ</h1>
+           <p className="text-slate-500">Tìm bác sĩ và đặt lịch khám nhanh chóng.</p>
         </div>
-
-        {/* Khu vực lọc + danh sách — thêm các khối màu mờ phía sau để không gian
-            giữa các thẻ không bị trắng trơn, vẫn giữ tông y tế nhẹ nhàng */}
-        <div className="relative">
-          <div className="pointer-events-none absolute -left-16 top-24 h-96 w-96 rounded-full bg-blue-300/50 blur-2xl" />
-          <div className="pointer-events-none absolute right-0 top-[28rem] h-96 w-96 rounded-full bg-teal-300/45 blur-2xl" />
-          <div className="pointer-events-none absolute left-1/4 bottom-0 h-80 w-80 rounded-full bg-rose-300/40 blur-2xl" />
-
-          {/* Bộ lọc */}
-          <div className="relative mb-8 flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm">
-          <Input
-            placeholder="Tìm theo tên bác sĩ..."
-            prefix={<SearchOutlined className="text-slate-400" />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 280 }}
-            allowClear
-          />
-          <Select value={specialty} onChange={setSpecialty} options={specialtyOptions} style={{ minWidth: 220 }} />
-
-          {/* Dải chữ chạy — lấp khoảng trống còn lại, dừng khi rê chuột vào để đọc */}
-          <div className="relative min-w-0 flex-1 overflow-hidden">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-white to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-white to-transparent" />
-            <div className="mc-marquee-track flex w-max" style={{ animation: 'mc-marquee 34s linear infinite' }}>
-              <MarqueeContent />
-              <MarqueeContent />
-            </div>
-          </div>
+        <div className="mb-8 flex gap-3 p-3 bg-white border rounded-2xl shadow-sm">
+          <Input placeholder="Tìm tên bác sĩ..." prefix={<SearchOutlined />} value={searchText} onChange={e => setSearchText(e.target.value)} style={{ maxWidth: 280 }} />
+          <Select value={specialty} onChange={setSpecialty} style={{ minWidth: 200 }} options={[{label: 'Tất cả', value: 'all'}, ...Array.from(new Set(doctors.map(d => d.specialty))).map(s => ({label: s, value: s}))]} />
         </div>
-
-        {loading ? (
+        {loading ? <div className="text-center p-20"><Spin size="large" /></div> : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse rounded-3xl border border-slate-200/70 bg-white p-6">
-                <div className="flex gap-4">
-                  <div className="h-16 w-16 rounded-2xl bg-slate-200" />
-                  <div className="flex-1 space-y-2 pt-1">
-                    <div className="h-4 w-3/4 rounded bg-slate-200" />
-                    <div className="h-3 w-1/2 rounded bg-slate-200" />
-                  </div>
-                </div>
-                <div className="mt-4 h-3 w-full rounded bg-slate-200" />
-                <div className="mt-2 h-3 w-5/6 rounded bg-slate-200" />
-                <div className="mt-4 h-16 rounded-2xl bg-slate-100" />
-                <div className="mt-4 h-10 rounded-xl bg-slate-200" />
-              </div>
-            ))}
+            {pagedDoctors.map(doctor => <DoctorCard key={doctor.id} doctor={doctor} />)}
           </div>
-        ) : filteredDoctors.length === 0 ? (
-          <Empty
-            description={doctors.length === 0 ? 'Chưa có bác sĩ nào trong hệ thống' : 'Không tìm thấy bác sĩ phù hợp'}
-            className="mt-12"
-          />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {pagedDoctors.map((doctor) => (
-                <DoctorCard key={doctor.id} doctor={doctor} />
-              ))}
-            </div>
-
-            {filteredDoctors.length > PAGE_SIZE && (
-              <div className="mt-10 flex justify-center">
-                <Pagination
-                  current={currentPage}
-                  pageSize={PAGE_SIZE}
-                  total={filteredDoctors.length}
-                  onChange={setCurrentPage}
-                  showSizeChanger={false}
-                />
-              </div>
-            )}
-          </>
         )}
-        </div>
       </div>
     </PageLayout>
+  )
+}
+
+// FILE CHÍNH BẮT BUỘC PHẢI CÓ SUSPENSE
+export default function DoctorsPage() {
+  return (
+    <Suspense fallback={<div className="p-20 text-center"><Spin size="large" /></div>}>
+      <DoctorsContent />
+    </Suspense>
   )
 }
