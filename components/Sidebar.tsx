@@ -6,7 +6,9 @@ import {
   CalendarOutlined,
   TeamOutlined,
   FileTextOutlined,
+  MedicineBoxOutlined,
   UserOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -18,6 +20,8 @@ const items = [
   { key: '/booking', icon: <CalendarOutlined />, label: <Link href="/booking">Đặt lịch khám</Link> },
   { key: '/doctors', icon: <TeamOutlined />, label: <Link href="/doctors">Bác sĩ</Link> },
   { key: '/appointments', icon: <FileTextOutlined />, label: <Link href="/appointments">Lịch hẹn</Link> },
+  { key: '/services', icon: <MedicineBoxOutlined />, label: <Link href="/services">Dịch vụ</Link> },
+  { key: '/contact', icon: <PhoneOutlined />, label: <Link href="/contact">Liên hệ</Link> },
   { key: '/profile', icon: <UserOutlined />, label: <Link href="/profile">Hồ sơ</Link> },
   { key: '/dashboard', icon: <DashboardOutlined />, label: <Link href="/dashboard">Tổng quan</Link> },
 ]
@@ -28,6 +32,8 @@ export default function Sidebar() {
   return (
     <Sider
       width={230}
+      breakpoint="md"
+      collapsedWidth={0}
       style={{
         position: 'sticky',
         top: 64,

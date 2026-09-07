@@ -33,6 +33,7 @@ export default function PageLayout({ children, bare = false }: { children: React
         <Sidebar />
         <Content
           style={{
+            minWidth: 0,
             ...(bare
               ? {}
               : {
