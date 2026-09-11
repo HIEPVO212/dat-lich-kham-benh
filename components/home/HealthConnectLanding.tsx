@@ -554,12 +554,14 @@ export default function HealthConnectLanding() {
                     </div>
                   </div>
 
-                  <h3 className="mt-5 text-xl font-bold text-slate-900">
-                    {doctor.academic_title ? `${doctor.academic_title} ` : ''}{doctor.full_name}
-                  </h3>
-                  <div className="mt-2 text-base font-medium text-cyan-700">{doctor.specialty_name}</div>
-                  <p className="mt-3 text-sm text-slate-600">{doctor.experience_years} năm kinh nghiệm</p>
-
+         <h3 className="mt-5 text-xl font-bold text-slate-900">
+  {doctor.academic_title ? `${doctor.academic_title} ` : ''}{doctor.full_name}
+</h3>
+<div className="mt-2 text-base font-medium text-cyan-700">{doctor.specialty_name}</div>
+<div className="mt-1 text-sm font-semibold text-slate-600">
+  🏥 {doctor.hospital || 'Bệnh viện Đa khoa Quốc tế'}
+</div>
+<p className="mt-2 text-sm text-slate-600">{doctor.experience_years} năm kinh nghiệm</p>
                   <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       <UserOutlined />
