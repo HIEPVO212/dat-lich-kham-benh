@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../lib/supabase'
+import { normalizeDoctorBookingStatus } from '../../../lib/doctors'
 
 export async function GET() {
   try {
@@ -38,7 +39,7 @@ export async function GET() {
         rating: doctorStats?.rating || 0,
         totalReviews: doctorStats?.total_reviews || 0,
         totalPatients: doctorStats?.total_patients || 0,
-        isAcceptingBookings: doctor.is_accepting_bookings ? 1 : 0,
+        isAcceptingBookings: normalizeDoctorBookingStatus(doctor.is_accepting_bookings) ? 1 : 0,
       }
     })
 

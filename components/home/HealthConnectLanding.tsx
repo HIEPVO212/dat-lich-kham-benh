@@ -7,13 +7,8 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  EnvironmentOutlined,
-  FacebookOutlined,
   HeartFilled,
   HeartOutlined,
-  InstagramOutlined,
-  MailOutlined,
-  PhoneOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
   StarFilled,
@@ -21,7 +16,6 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { getSpecialties, type Specialty } from '../../lib/specialties'
-import { CONTACT_INFO } from '../../lib/contact'
 import { getDoctors, type Doctor } from '../../lib/doctors'
 import { getAppointmentsLast24Hours, getCompletedPatientCount, getLatestAppointment, type LatestAppointment } from '../../lib/appointments'
 import { createReview, getReviews, type Review } from '../../lib/reviews'
@@ -676,103 +670,6 @@ export default function HealthConnectLanding() {
 
       </main>
 
-      <footer id="contact" className="bg-slate-950 py-12 text-slate-300">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.5fr_1fr_1.2fr_1.5fr] lg:px-8">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 shadow-lg shadow-cyan-500/30">
-                <HeartFilled className="text-lg text-white" />
-              </div>
-              <div className="text-lg font-black tracking-[0.22em] text-white">HEALTHCONNECT</div>
-            </div>
-            <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
-              Nền tảng kết nối bệnh nhân và bác sĩ, giúp việc đặt lịch khám trở nên đơn giản và thuận tiện.
-            </p>
-            <div className="mt-5 flex items-center gap-3">
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300">
-                <FacebookOutlined />
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-cyan-400 hover:text-cyan-300">
-                <InstagramOutlined />
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-base font-bold text-white">Về HEALTHCONNECT</h3>
-            <ul className="mt-4 space-y-3 text-sm text-slate-400">
-              <li>
-                <Link href="/about" className="transition hover:text-cyan-300">
-                  Về chúng tôi
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="transition hover:text-cyan-300">
-                  Chính sách bảo mật
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="transition hover:text-cyan-300">
-                  Điều khoản sử dụng
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-base font-bold text-white">Liên kết nhanh</h3>
-            <ul className="mt-4 space-y-3 text-sm text-slate-400">
-              <li>
-                <Link href="/" className="transition hover:text-cyan-300">
-                  Trang chủ
-                </Link>
-              </li>
-              <li>
-                <Link href="/doctors" className="transition hover:text-cyan-300">
-                  Bác sĩ
-                </Link>
-              </li>
-              <li>
-                <Link href="/chuyen-khoa" className="transition hover:text-cyan-300">
-                  Chuyên khoa
-                </Link>
-              </li>
-              <li>
-                <Link href="/booking" className="transition hover:text-cyan-300">
-                  Đặt lịch khám
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="transition hover:text-cyan-300">
-                  Liên hệ
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-base font-bold text-white">Thông tin liên hệ</h3>
-            <ul className="mt-4 space-y-3 text-sm text-slate-400">
-              <li className="flex items-center gap-2">
-                <PhoneOutlined className="text-cyan-300" />
-                <span>Hotline: {CONTACT_INFO.hotline}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <MailOutlined className="text-cyan-300" />
-                <span>Email: {CONTACT_INFO.email}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <EnvironmentOutlined className="text-cyan-300" />
-                <span>Địa chỉ: {CONTACT_INFO.address}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-8 max-w-7xl border-t border-slate-800 px-4 pt-6 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
-          © 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.
-        </div>
-      </footer>
     </div>
   )
 }

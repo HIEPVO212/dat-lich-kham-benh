@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Đặt lịch khám bệnh
 
-## Getting Started
+Ứng dụng Next.js kết nối với Supabase và triển khai trên Vercel.
 
-First, run the development server:
+## Cấu hình biến môi trường
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Ứng dụng bắt buộc có hai biến môi trường:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Chạy local
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Sao chép `.env.example` thành `.env.local`.
+2. Mở Supabase Dashboard → **Project Settings** → **API**.
+3. Điền `Project URL` vào `NEXT_PUBLIC_SUPABASE_URL`.
+4. Điền key **anon / publishable** vào `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+5. Khởi động lại Next.js bằng `npm run dev`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Không dùng `service_role` key ở trình duyệt và không commit file `.env.local`.
 
-## Learn More
+### Cấu hình trên Vercel
 
-To learn more about Next.js, take a look at the following resources:
+Vào **Vercel Project → Settings → Environment Variables**, tạo cả hai biến trên cho các môi trường cần deploy (**Production**, **Preview** và/hoặc **Development**). Sau đó tạo một deployment mới hoặc chọn **Redeploy** để biến môi trường được áp dụng.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Sau khi cấu hình xong, lỗi `supabaseUrl is required` sẽ không còn xuất hiện.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Chạy dự án
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Kiểm tra bản production:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+```

@@ -1,5 +1,12 @@
 import { supabase } from './supabase'
 
+export function normalizeDoctorBookingStatus(value: boolean | number | string | null | undefined): boolean {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase())
+  return false
+}
+
 export type Doctor = {
   doctor_id: number
   full_name: string
@@ -35,7 +42,7 @@ export async function getDoctors(): Promise<Doctor[]> {
     specialty_id: Number(doctor.specialty_id),
     specialty_name: doctor.specialty?.[0]?.specialty_name ?? 'Chưa cập nhật',
     experience_years: Number(doctor.experience_years ?? 0),
-    is_accepting_bookings: Boolean(doctor.is_accepting_bookings),
+    is_accepting_bookings: normalizeDoctorBookingStatus(doctor.is_accepting_bookings),
   }))
 }
 export type SpecialtyDoctorCount = { specialty_name: string; count: number }

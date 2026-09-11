@@ -315,7 +315,7 @@ function BookingFormContent() {
       >
         <Row align="middle" justify="space-between" gutter={[16, 16]}>
           <Col xs={24} md={16}>
-            <Space direction="vertical" size={8}>
+            <Space orientation="vertical" size={8}>
               <Tag
                 color="blue"
                 style={{
@@ -363,7 +363,7 @@ function BookingFormContent() {
         {/* CỘT TRÁI: FORM ĐẶT LỊCH */}
         <Col xs={24} lg={15}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 22,
               boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)',
@@ -686,7 +686,7 @@ function BookingFormContent() {
           <div style={{ position: 'sticky', top: 24, display: 'grid', gap: 20 }}>
             {/* THẺ TÓM TẮT PHIẾU KHÁM TRỰC TIẾP */}
             <Card
-              bordered={false}
+              variant="borderless"
               title={
                 <Space>
                   <CalendarOutlined style={{ color: '#2563eb' }} />
@@ -790,7 +790,7 @@ function BookingFormContent() {
 
             {/* THẺ HƯỚNG DẪN BỆNH NHÂN */}
             <Card
-              bordered={false}
+              variant="borderless"
               title={
                 <Space>
                   <InfoCircleOutlined style={{ color: '#0ea5e9' }} />
@@ -821,7 +821,7 @@ function BookingFormContent() {
 
             {/* THẺ TỔNG ĐÀI HỖ TRỢ */}
             <Card
-              bordered={false}
+              variant="borderless"
               style={{
                 borderRadius: 22,
                 background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
