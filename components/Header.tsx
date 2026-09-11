@@ -97,7 +97,7 @@ export default function Header() {
               <Avatar icon={<UserOutlined />} style={{ background: '#fff', color: '#1d4ed8' }} />
               <div className="app-user-details" style={{ lineHeight: 1.2 }}>
                 <div className="app-user-name">{user.full_name || user.email}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>{roleLabel[user.role] || 'Thành viên'}</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>{roleLabel[user.role ?? ''] || 'Thành viên'}</div>
               </div>
             </div>
           </Dropdown>
