@@ -1,41 +1,34 @@
-# Đặt lịch khám bệnh
+# HEALTHCONNECT - Hệ Thống Đặt Lịch Khám Bệnh Trực Tuyến
 
-Ứng dụng Next.js kết nối với Supabase và triển khai trên Vercel.
+Website đặt lịch khám bệnh trực tuyến kết nối bệnh nhân và bác sĩ chuyên khoa, hỗ trợ quản lý lịch khám theo thời gian thực.
 
-## Cấu hình biến môi trường
+- **Production URL**: [https://dat-lich-kham-benh.vercel.app](https://dat-lich-kham-benh.vercel.app)
+- **Repository**: [https://github.com/HIEPVO212/dat-lich-kham-benh](https://github.com/HIEPVO212/dat-lich-kham-benh)
 
-Ứng dụng bắt buộc có hai biến môi trường:
+---
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
+## 1. Công nghệ sử dụng
+- **Frontend Framework**: Next.js 16 (App Router), React 19, TypeScript.
+- **UI Library & Styling**: Ant Design (AntD) 5, Tailwind CSS.
+- **State Management**: React Context API (`AuthContext`) quản lý phiên đăng nhập và profile toàn cục.
+- **Backend & Database**: Supabase (PostgreSQL), Supabase Auth (JWT), Row Level Security (RLS).
+- **Storage**: Supabase Storage (`avatars` bucket) hỗ trợ upload ảnh đại diện.
+- **Deployment**: Vercel CI/CD Pipeline.
 
-### Chạy local
+---
 
-1. Sao chép `.env.example` thành `.env.local`.
-2. Mở Supabase Dashboard → **Project Settings** → **API**.
-3. Điền `Project URL` vào `NEXT_PUBLIC_SUPABASE_URL`.
-4. Điền key **anon / publishable** vào `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-5. Khởi động lại Next.js bằng `npm run dev`.
-
-Không dùng `service_role` key ở trình duyệt và không commit file `.env.local`.
-
-### Cấu hình trên Vercel
-
-Vào **Vercel Project → Settings → Environment Variables**, tạo cả hai biến trên cho các môi trường cần deploy (**Production**, **Preview** và/hoặc **Development**). Sau đó tạo một deployment mới hoặc chọn **Redeploy** để biến môi trường được áp dụng.
-
-Sau khi cấu hình xong, lỗi `supabaseUrl is required` sẽ không còn xuất hiện.
-
-## Chạy dự án
-
+## 2. Hướng dẫn cài đặt & Chạy cục bộ
 ```bash
+# 1. Clone repository
+git clone https://github.com/HIEPVO212/dat-lich-kham-benh.git
+cd dat-lich-kham-benh
+
+# 2. Cài đặt thư viện phụ thuộc
 npm install
+
+# 3. Tạo file biến môi trường .env.local
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# 4. Chạy môi trường development
 npm run dev
-```
-
-Kiểm tra bản production:
-
-```bash
-npm run build
-```

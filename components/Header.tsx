@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Layout, Button, Avatar, Dropdown, Tag } from 'antd'
 import { HeartFilled, UserOutlined, LogoutOutlined, CrownOutlined, MenuOutlined } from '@ant-design/icons'
 import Link from 'next/link'
-import { getCurrentUser, logoutUser } from '../lib/auth'
+import { useAuth } from '../lib/AuthContext'
 
 const { Header: AntHeader } = Layout
 
@@ -14,23 +13,12 @@ const roleLabel: Record<string, string> = {
   patient: 'Bệnh nhân',
 }
 
-type HeaderUser = {
-  role?: string
-  full_name?: string | null
-  email?: string | null
-}
-
 export default function Header() {
   const router = useRouter()
-  const [user, setUser] = useState<HeaderUser | null>(null)
-
-  useEffect(() => {
-    getCurrentUser().then(setUser)
-  }, [])
+  const { user, logout } = useAuth()
 
   const handleLogout = async () => {
-    await logoutUser()
-    setUser(null)
+    await logout()
     router.push('/dashboard')
   }
 
@@ -94,10 +82,16 @@ export default function Header() {
           )}
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#fff' }}>
-              <Avatar icon={<UserOutlined />} style={{ background: '#fff', color: '#1d4ed8' }} />
+              <Avatar
+                src={user.avatar_url}
+                icon={!user.avatar_url && <UserOutlined />}
+                style={{ background: '#fff', color: '#1d4ed8' }}
+              />
               <div className="app-user-details" style={{ lineHeight: 1.2 }}>
                 <div className="app-user-name">{user.full_name || user.email}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>{roleLabel[user.role ?? ''] || 'Thành viên'}</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>
+                  {roleLabel[user.role ?? ''] || 'Thành viên'}
+                </div>
               </div>
             </div>
           </Dropdown>

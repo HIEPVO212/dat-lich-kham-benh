@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "../lib/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,14 +18,20 @@ export const metadata: Metadata = {
   description: "HEALTHCONNECT giúp bạn đặt lịch khám bệnh nhanh chóng với bác sĩ chuyên khoa, lịch làm việc rõ ràng và trải nghiệm chăm sóc sức khỏe tối ưu.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="vi"
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">{children}</body>
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

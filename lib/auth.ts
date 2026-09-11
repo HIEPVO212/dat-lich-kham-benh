@@ -169,3 +169,25 @@ export async function changePassword(newPassword: string) {
   const { error } = await supabase.auth.updateUser({ password: newPassword })
   if (error) throw error
 }
+export async function uploadAvatar(userId: string, file: File) {
+  const fileExt = file.name.split('.').pop()
+  const filePath = `${userId}-${Date.now()}.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, { upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
+  const avatarUrl = publicUrlData.publicUrl
+
+  const { data: updated, error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return updated
+}
