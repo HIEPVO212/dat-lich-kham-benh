@@ -318,7 +318,7 @@ function DoctorsContent() {
   return (
     <PageLayout>
       <div className={beVietnamPro.className}>
-        <div className="relative mb-8 rounded-3xl bg-gradient-to-br from-blue-50 to-teal-50 p-10">
+        <div className="relative mb-8 rounded-3xl bg-gradient-to-br from-blue-50 to-teal-50 p-6 sm:p-8 lg:p-10">
            <h1 className="text-3xl font-extrabold text-slate-900">Danh sách bác sĩ</h1>
            <p className="text-slate-500">Tìm bác sĩ và đặt lịch khám nhanh chóng.</p>
         </div>
@@ -345,7 +345,7 @@ function DoctorsContent() {
         </div>
         {isAdmin && (
           <div className="mb-8 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Quản lý bác sĩ</h2>
                 <p className="text-sm text-slate-500">Dữ liệu được lưu trực tiếp trên Supabase.</p>
@@ -368,6 +368,7 @@ function DoctorsContent() {
               className="mb-4 !rounded-xl !border-blue-200 !bg-white"
               style={{ maxWidth: 420 }}
             />
+            <div className="overflow-x-auto">
             <Table
               rowKey="id"
               size="small"
@@ -412,6 +413,7 @@ function DoctorsContent() {
                 },
               ]}
             />
+            </div>
           </div>
         )}
         {loading ? <div className="p-20 text-center"><Spin size="large" /></div> : filteredDoctors.length === 0 ? (

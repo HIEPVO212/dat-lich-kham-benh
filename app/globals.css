@@ -53,6 +53,110 @@ a {
   text-decoration: none;
 }
 
+.app-content {
+  width: 100%;
+}
+
+.mobile-menu-button {
+  display: none;
+  color: #fff !important;
+  font-size: 20px;
+}
+
+.mobile-navigation-drawer {
+  display: none;
+}
+
+.app-footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr 1.4fr;
+  gap: 32px;
+}
+
+@media (max-width: 767px) {
+  .app-header {
+    padding: 0 12px !important;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: 8px;
+  }
+
+  .app-sidebar {
+    display: none;
+  }
+
+  .mobile-navigation-drawer {
+    display: block;
+  }
+
+  .app-brand-name {
+    font-size: 13px !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  .app-user-details,
+  .app-header .ant-tag {
+    display: none;
+  }
+
+  .app-content {
+    margin: 10px !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .app-footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+
+  .app-footer-grid > div:first-child p {
+    max-width: none;
+  }
+
+  .booking-hero {
+    padding: 22px 18px 20px !important;
+    border-radius: 18px !important;
+  }
+
+  .booking-hero h2 {
+    font-size: 24px !important;
+  }
+
+  .booking-hero-action {
+    justify-content: flex-start !important;
+  }
+
+  .booking-hero-action a,
+  .booking-hero-action button {
+    width: 100%;
+  }
+
+  .ant-form-item-label > label {
+    white-space: normal;
+  }
+
+  .ant-modal {
+    max-width: calc(100vw - 24px);
+    margin: 12px auto;
+  }
+
+  .ant-modal-content {
+    padding: 18px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .app-footer-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
 button,
 input,
 textarea,

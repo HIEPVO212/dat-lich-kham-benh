@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Layout, Button, Avatar, Dropdown, Tag } from 'antd'
-import { HeartFilled, UserOutlined, LogoutOutlined, CrownOutlined } from '@ant-design/icons'
+import { HeartFilled, UserOutlined, LogoutOutlined, CrownOutlined, MenuOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { getCurrentUser, logoutUser } from '../lib/auth'
 
@@ -14,9 +14,15 @@ const roleLabel: Record<string, string> = {
   patient: 'Bệnh nhân',
 }
 
+type HeaderUser = {
+  role?: string
+  full_name?: string | null
+  email?: string | null
+}
+
 export default function Header() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<HeaderUser | null>(null)
 
   useEffect(() => {
     getCurrentUser().then(setUser)
@@ -28,6 +34,10 @@ export default function Header() {
     router.push('/dashboard')
   }
 
+  const toggleMobileMenu = () => {
+    window.dispatchEvent(new CustomEvent('healthconnect:toggle-mobile-menu'))
+  }
+
   const menuItems = [
     { key: 'profile', label: <Link href="/profile">Hồ sơ của tôi</Link>, icon: <UserOutlined /> },
     { key: 'logout', label: 'Đăng xuất', icon: <LogoutOutlined />, onClick: handleLogout },
@@ -35,6 +45,7 @@ export default function Header() {
 
   return (
     <AntHeader
+      className="app-header"
       style={{
         position: 'sticky',
         top: 0,
@@ -61,10 +72,18 @@ export default function Header() {
         >
           <HeartFilled style={{ color: '#fff', fontSize: 18 }} />
         </div>
-        <span style={{ color: '#fff', fontSize: 18, fontWeight: 900, letterSpacing: '0.18em' }}>
+        <span className="app-brand-name" style={{ color: '#fff', fontSize: 18, fontWeight: 900, letterSpacing: '0.18em' }}>
           HEALTHCONNECT
         </span>
       </Link>
+
+      <Button
+        className="mobile-menu-button"
+        type="text"
+        icon={<MenuOutlined />}
+        aria-label="Mở menu điều hướng"
+        onClick={toggleMobileMenu}
+      />
 
       {user ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -76,8 +95,8 @@ export default function Header() {
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#fff' }}>
               <Avatar icon={<UserOutlined />} style={{ background: '#fff', color: '#1d4ed8' }} />
-              <div style={{ lineHeight: 1.2 }}>
-                <div>{user.full_name || user.email}</div>
+              <div className="app-user-details" style={{ lineHeight: 1.2 }}>
+                <div className="app-user-name">{user.full_name || user.email}</div>
                 <div style={{ fontSize: 12, opacity: 0.85 }}>{roleLabel[user.role] || 'Thành viên'}</div>
               </div>
             </div>

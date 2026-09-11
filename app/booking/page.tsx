@@ -305,6 +305,7 @@ function BookingFormContent() {
     <div style={{ display: 'grid', gap: 24 }}>
       {/* Banner Tiêu đề phong cách Y tế đồng bộ */}
       <div
+        className="booking-hero"
         style={{
           background: 'linear-gradient(135deg, #e0f2fe 0%, #dbeafe 35%, #eff6ff 100%)',
           border: '1px solid rgba(37, 99, 235, 0.12)',
@@ -337,7 +338,7 @@ function BookingFormContent() {
               </Text>
             </Space>
           </Col>
-          <Col xs={24} md={8} style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <Col className="booking-hero-action" xs={24} md={8} style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Link href="/appointments">
               <Button
                 icon={<FileTextOutlined />}

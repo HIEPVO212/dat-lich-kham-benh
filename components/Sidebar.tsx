@@ -1,5 +1,6 @@
 'use client'
-import { Layout, Menu } from 'antd'
+import { Drawer, Layout, Menu } from 'antd'
+import { useEffect, useState } from 'react'
 import {
   HomeOutlined,
   DashboardOutlined,
@@ -28,9 +29,28 @@ const items = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const toggleMobileMenu = () => setMobileOpen((open) => !open)
+    window.addEventListener('healthconnect:toggle-mobile-menu', toggleMobileMenu)
+    return () => window.removeEventListener('healthconnect:toggle-mobile-menu', toggleMobileMenu)
+  }, [])
+
+  const navigationMenu = (
+    <Menu
+      mode="inline"
+      selectedKeys={[pathname]}
+      items={items}
+      style={{ height: '100%', borderRight: 0, paddingTop: 12, fontSize: 15 }}
+      onClick={() => setMobileOpen(false)}
+    />
+  )
 
   return (
+    <>
     <Sider
+      className="app-sidebar"
       width={230}
       breakpoint="md"
       collapsedWidth={0}
@@ -44,12 +64,19 @@ export default function Sidebar() {
         overflow: 'auto',
       }}
     >
-      <Menu
-        mode="inline"
-        selectedKeys={[pathname]}
-        items={items}
-        style={{ height: '100%', borderRight: 0, paddingTop: 12, fontSize: 15 }}
-      />
+      {navigationMenu}
     </Sider>
+    <Drawer
+      className="mobile-navigation-drawer"
+      title="Menu HEALTHCONNECT"
+      placement="left"
+      width={230}
+      open={mobileOpen}
+      onClose={() => setMobileOpen(false)}
+      styles={{ body: { padding: 0 } }}
+    >
+      {navigationMenu}
+    </Drawer>
+    </>
   )
 }

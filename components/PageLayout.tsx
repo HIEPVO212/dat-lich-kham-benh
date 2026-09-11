@@ -32,6 +32,7 @@ export default function PageLayout({ children, bare = false }: { children: React
       <Layout style={{ background: 'transparent' }}>
         <Sidebar />
         <Content
+          className="app-content"
           style={{
             minWidth: 0,
             ...(bare
@@ -70,6 +71,7 @@ export default function PageLayout({ children, bare = false }: { children: React
       <Footer style={{ background: '#0f172a', color: '#e2e8f0', padding: '56px 24px 32px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div
+            className="app-footer-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: '1.4fr 1fr 1.2fr 1.4fr',
