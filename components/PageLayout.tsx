@@ -21,6 +21,7 @@ import {
 import { Drawer, Avatar, Dropdown, MenuProps, Button } from 'antd'
 import { supabase } from '../lib/supabase'
 import { CONTACT_INFO } from '../lib/contact'
+import type { User } from '@supabase/supabase-js'
 
 const MENU_ITEMS = [
   { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
@@ -38,12 +39,12 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [userRole, setUserRole] = useState('user')
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    async function loadUser(session: any) {
+    async function loadUser(session: { user: User | null } | null) {
       const currentUser = session?.user || null
       setUser(currentUser)
       if (!currentUser) {
@@ -53,9 +54,17 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
 
       const { data: profile } = await supabase
         .from('users')
-        .select('role')
+        .select('role, avatar_url')
         .eq('id', currentUser.id)
         .maybeSingle()
+
+      setUser({
+        ...currentUser,
+        user_metadata: {
+          ...currentUser.user_metadata,
+          avatar_url: profile?.avatar_url || currentUser.user_metadata?.avatar_url || '',
+        },
+      })
 
       setUserRole(
         currentUser.email?.toLowerCase() === 'hiepvo212600@gmail.com'
@@ -187,9 +196,12 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
             {user ? (
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
                 <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-white/10 cursor-pointer transition-all">
-                  <div className="w-9 h-9 rounded-full bg-white text-[#1677ff] flex items-center justify-center font-bold text-base shadow-sm">
-                    <UserOutlined />
-                  </div>
+                  <Avatar
+                    size={36}
+                    src={user.user_metadata?.avatar_url}
+                    icon={<UserOutlined />}
+                    className="bg-white text-[#1677ff] shadow-sm"
+                  />
                   <div className="text-left leading-tight hidden sm:block">
                     <div className="text-sm font-bold text-white truncate max-w-[150px]">
                       {userName}

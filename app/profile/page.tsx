@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Form, Input, Button, Card, Avatar, message, Tag, Spin, Divider } from 'antd'
+import { Form, Input, Button, Card, Avatar, message, Tag, Spin, Upload } from 'antd'
 import {
   UserOutlined,
   MailOutlined,
@@ -9,17 +9,27 @@ import {
   CrownOutlined,
   SafetyCertificateOutlined,
   SaveOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import PageLayout from '../../components/PageLayout'
 import { supabase } from '../../lib/supabase'
+type UserProfile = {
+  id: string
+  email: string | null | undefined
+  fullName: string
+  phone: string
+  avatarUrl: string
+  role: string
+}
 
 export default function ProfilePage() {
   const router = useRouter()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [userProfile, setUserProfile] = useState<any>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
 
   useEffect(() => {
     async function loadProfile() {
@@ -59,6 +69,7 @@ export default function ProfilePage() {
           email: user.email,
           fullName,
           phone,
+          avatarUrl: dbUser?.avatar_url || user.user_metadata?.avatar_url || '',
           role,
         })
 
@@ -77,7 +88,7 @@ export default function ProfilePage() {
     loadProfile()
   }, [router, form])
 
-  async function handleSave(values: any) {
+  async function handleSave(values: { fullName: string; phone?: string }) {
     setSaving(true)
     try {
       if (!userProfile?.id) return
@@ -104,17 +115,86 @@ export default function ProfilePage() {
       })
 
       message.success('Cập nhật thông tin hồ sơ thành công!')
-      setUserProfile((prev: any) => ({
-        ...prev,
-        fullName: values.fullName,
-        phone: values.phone,
-      }))
-    } catch (err: any) {
+      setUserProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              fullName: values.fullName,
+              phone: values.phone || '',
+            }
+          : prev,
+      )
+    } catch (err) {
       console.error('Lỗi lưu profile:', err)
-      message.error('Không thể cập nhật hồ sơ: ' + err.message)
+      message.error('Không thể cập nhật hồ sơ: ' + (err instanceof Error ? err.message : 'Vui lòng thử lại'))
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleUploadAvatar(file: File) {
+    if (!file.type.startsWith('image/')) {
+      message.error('Vui lòng chọn tệp hình ảnh')
+      return false
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('Ảnh đại diện không được vượt quá 5MB')
+      return false
+    }
+
+    setUploadingAvatar(true)
+    try {
+      if (!userProfile?.id) throw new Error('Không tìm thấy người dùng hiện tại')
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const filePath = `profiles/${userProfile.id}/${Date.now()}.${fileExt}`
+      let uploadError
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await supabase.storage.from('avatars').upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: true,
+        })
+        uploadError = result.error
+        if (!uploadError || String(uploadError.statusCode) !== '520') break
+      }
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      const avatarUrl = data.publicUrl
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: { avatar_url: avatarUrl },
+      })
+
+      if (metadataError) throw metadataError
+
+      setUserProfile((prev) => (prev ? { ...prev, avatarUrl } : prev))
+
+      const { error: profileError } = await supabase
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userProfile.id)
+
+      if (profileError) {
+        console.warn('Ảnh đã tải lên nhưng chưa đồng bộ bảng users:', profileError)
+        message.warning('Ảnh đã tải lên thành công.')
+      } else {
+        message.success('Đã cập nhật ảnh đại diện')
+      }
+    } catch (err) {
+      console.error('Lỗi upload ảnh đại diện:', err)
+      const storageError = err as { message?: string; statusCode?: number | string }
+      const errorCode = storageError.statusCode ? ` (HTTP ${storageError.statusCode})` : ''
+      message.error(
+        'Không thể tải ảnh lên' + errorCode + ': ' + (storageError.message || 'Vui lòng thử lại'),
+      )
+    } finally {
+      setUploadingAvatar(false)
+    }
+
+    return false
   }
 
   if (loading) {
@@ -147,19 +227,38 @@ export default function ProfilePage() {
               borderBottom: '1px solid #f1f5f9',
             }}
           >
-            <Avatar
-              size={72}
-              icon={<UserOutlined />}
-              style={{
-                backgroundColor:
-                  userProfile?.role === 'admin'
-                    ? '#f59e0b'
-                    : userProfile?.role === 'member'
-                    ? '#10b981'
-                    : '#0284c7',
-                fontSize: 32,
-              }}
-            />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Avatar
+                size={72}
+                src={userProfile?.avatarUrl}
+                icon={<UserOutlined />}
+                style={{
+                  backgroundColor:
+                    userProfile?.role === 'admin'
+                      ? '#f59e0b'
+                      : userProfile?.role === 'member'
+                      ? '#10b981'
+                      : '#0284c7',
+                  fontSize: 32,
+                }}
+              />
+              <Upload
+                beforeUpload={handleUploadAvatar}
+                showUploadList={false}
+                accept="image/*"
+              >
+                <Button
+                  type="primary"
+                  shape="circle"
+                  size="small"
+                  icon={<UploadOutlined />}
+                  loading={uploadingAvatar}
+                  aria-label="Tải ảnh đại diện"
+                  title="Tải ảnh đại diện"
+                  style={{ position: 'absolute', right: -4, bottom: -2 }}
+                />
+              </Upload>
+            </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Drawer, Avatar, Dropdown, MenuProps, Button } from 'antd'
+import { Drawer, Avatar, Dropdown, MenuProps } from 'antd'
 import {
   MenuOutlined,
   UserOutlined,
@@ -18,6 +18,7 @@ import {
   SettingOutlined,
 } from '@ant-design/icons'
 import { supabase } from '../lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
 const menuItems = [
   { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
@@ -34,7 +35,7 @@ const menuItems = [
 export default function Header() {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -172,7 +173,12 @@ export default function Header() {
                   cursor: 'pointer',
                 }}
               >
-                <Avatar size={28} icon={<UserOutlined />} style={{ backgroundColor: '#fff', color: '#0088cc' }} />
+                <Avatar
+                  size={28}
+                  src={user.user_metadata?.avatar_url}
+                  icon={<UserOutlined />}
+                  style={{ backgroundColor: '#fff', color: '#0088cc' }}
+                />
                 <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>
                   {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Người dùng'}
                 </span>
