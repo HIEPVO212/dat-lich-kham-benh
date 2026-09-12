@@ -1,164 +1,384 @@
 'use client'
-import { Layout, Button } from 'antd'
-import { ArrowLeftOutlined, HeartFilled, PhoneOutlined, MailOutlined, EnvironmentOutlined } from '@ant-design/icons'
-import { useRouter } from 'next/navigation'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Header from './Header'
-import Sidebar from './Sidebar'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  HomeOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  ClockCircleOutlined,
+  AppstoreOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  MenuOutlined,
+  LogoutOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
+} from '@ant-design/icons'
+import { Drawer, Avatar, Dropdown, MenuProps, Button } from 'antd'
+import { supabase } from '../lib/supabase'
 import { CONTACT_INFO } from '../lib/contact'
 
-const { Content, Footer } = Layout
-
-const quickLinks = [
-  { href: '/', label: 'Trang chủ' },
-  { href: '/doctors', label: 'Bác sĩ' },
-  { href: '/chuyen-khoa', label: 'Chuyên khoa' },
-  { href: '/booking', label: 'Đặt lịch khám' },
-  { href: '/contact', label: 'Liên hệ' },
+const MENU_ITEMS = [
+  { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
+  { key: '/booking', label: 'Đặt lịch khám', icon: <CalendarOutlined /> },
+  { key: '/doctors', label: 'Bác sĩ', icon: <TeamOutlined /> },
+  { key: '/appointments', label: 'Lịch hẹn của tôi', icon: <ClockCircleOutlined /> },
+  { key: '/services', label: 'Dịch vụ', icon: <AppstoreOutlined /> },
+  { key: '/contact', label: 'Liên hệ', icon: <PhoneOutlined /> },
+  { key: '/profile', label: 'Hồ sơ', icon: <UserOutlined /> },
+  { key: '/dashboard', label: 'Tổng quan', icon: <DashboardOutlined /> },
+  { key: '/admin', label: 'Quản trị hệ thống', icon: <SettingOutlined /> },
 ]
 
-const aboutLinks = [
-  { href: '/about', label: 'Về chúng tôi' },
-  { href: '/privacy', label: 'Chính sách bảo mật' },
-  { href: '/terms', label: 'Điều khoản sử dụng' },
-]
-
-export default function PageLayout({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
+export default function PageLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const router = useRouter()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [userRole, setUserRole] = useState('user')
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    async function loadUser(session: any) {
+      const currentUser = session?.user || null
+      setUser(currentUser)
+      if (!currentUser) {
+        setUserRole('user')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+
+      setUserRole(
+        currentUser.email?.toLowerCase() === 'hiepvo212600@gmail.com'
+          ? 'admin'
+          : profile?.role || currentUser.user_metadata?.role || 'user'
+      )
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => loadUser(session))
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => loadUser(session))
+
+    function checkWidth() {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkWidth()
+    window.addEventListener('resize', checkWidth)
+
+    return () => {
+      subscription.unsubscribe()
+      window.removeEventListener('resize', checkWidth)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setUserRole('user')
+    router.push('/')
+  }
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'dashboard',
+      icon: <DashboardOutlined />,
+      label: <Link href="/dashboard" className="font-bold text-blue-600">Trang Quản trị viên</Link>,
+    },
+    {
+      key: 'appointments',
+      icon: <ClockCircleOutlined />,
+      label: <Link href="/appointments">Lịch hẹn của tôi</Link>,
+    },
+    {
+      key: 'admin',
+      icon: <SettingOutlined />,
+      label: <Link href="/admin">Quản lý tài khoản</Link>,
+    },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: <Link href="/profile">Hồ sơ cá nhân</Link>,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      danger: true,
+      label: 'Đăng xuất',
+      onClick: handleLogout,
+    },
+  ]
+
+  const renderNavLinks = (onClickItem?: () => void) => (
+    <nav className="flex flex-col gap-1 p-2">
+      {MENU_ITEMS.map((item) => {
+        const isActive =
+          item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)
+
+        return (
+          <Link
+            key={item.key}
+            href={item.key}
+            onClick={() => {
+              if (onClickItem) onClickItem()
+            }}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
+              isActive
+                ? 'bg-blue-50 text-blue-600 font-bold shadow-sm'
+                : 'text-slate-600 hover:text-blue-600 hover:bg-slate-100/70'
+            }`}
+          >
+            <span className={`text-base ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
+              {item.icon}
+            </span>
+            <span className="truncate">{item.label}</span>
+          </Link>
+        )
+      })}
+    </nav>
+  )
+
+  const userName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'Đinh Thị Bích Hằng'
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f0f9ff 0%, #eef6ff 100%)' }}>
-      <Header />
-      <Layout style={{ background: 'transparent' }}>
-        <Sidebar />
-        <Content
-          className="app-content"
-          style={{
-            minWidth: 0,
-            ...(bare
-              ? {}
-              : {
-                  margin: 20,
-                  padding: 26,
-                  background: 'rgba(255,255,255,0.8)',
-                  borderRadius: 22,
-                  border: '1px solid rgba(37, 99, 235, 0.08)',
-                  boxShadow: '0 12px 30px rgba(37, 99, 235, 0.06)',
-                  backdropFilter: 'blur(10px)',
-                }),
-          }}
-        >
-          {!bare && (
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.back()}
-              style={{
-                marginBottom: 18,
-                borderRadius: 10,
-                background: '#eff6ff',
-                borderColor: '#bfdbfe',
-                color: '#1d4ed8',
-                fontWeight: 600,
-              }}
+    <div className="min-h-screen bg-slate-50 flex flex-col antialiased">
+      {/* 1. HEADER CỐ ĐỊNH XANH FULL WIDTH */}
+      <header className="sticky top-0 z-40 bg-[#1677ff] text-white shadow-sm w-full">
+        <div className="w-full px-4 sm:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="lg:hidden p-2 -ml-1 rounded-lg text-white hover:bg-white/10 active:bg-white/20 transition-colors cursor-pointer"
+              aria-label="Toggle Menu"
             >
-              Quay lại
-            </Button>
-          )}
-          {children}
-        </Content>
-      </Layout>
+              <MenuOutlined className="text-xl" />
+            </button>
 
-      <Footer style={{ background: '#0f172a', color: '#e2e8f0', padding: '56px 24px 32px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div
-            className="app-footer-grid"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1.4fr 1fr 1.2fr 1.4fr',
-              gap: 32,
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                  }}
-                >
-                  <HeartFilled style={{ color: '#fff', fontSize: 18 }} />
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 2, color: '#fff' }}>HEALTHCONNECT</div>
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold shadow-inner">
+                ❤
               </div>
+              <span className="text-lg sm:text-xl font-black tracking-widest text-white uppercase">
+                HEALTHCONNECT
+              </span>
+            </Link>
+          </div>
 
-              <p style={{ color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
+          {/* User Info góc phải */}
+          <div className="flex items-center gap-3">
+            {user ? (
+              <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-white/10 cursor-pointer transition-all">
+                  <div className="w-9 h-9 rounded-full bg-white text-[#1677ff] flex items-center justify-center font-bold text-base shadow-sm">
+                    <UserOutlined />
+                  </div>
+                  <div className="text-left leading-tight hidden sm:block">
+                    <div className="text-sm font-bold text-white truncate max-w-[150px]">
+                      {userName}
+                    </div>
+                    <div className="text-xs text-blue-100 font-normal">
+                      {userRole === 'admin'
+                        ? 'Quản trị viên'
+                        : userRole === 'member'
+                        ? 'Thành viên'
+                        : 'Người dùng'}
+                    </div>
+                  </div>
+                </div>
+              </Dropdown>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3.5 py-1.5 text-sm font-semibold text-white bg-white/15 hover:bg-white/25 rounded-lg border border-white/20 transition-colors"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  href="/register"
+                  className="hidden sm:inline-block px-3.5 py-1.5 text-sm font-semibold text-[#1677ff] bg-white rounded-lg shadow-sm hover:bg-slate-100 transition-colors"
+                >
+                  Đăng ký
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* 2. PHẦN THÂN WEB: GỒM SIDEBAR + NỘI DUNG CHÍNH */}
+      <div className="flex-1 flex w-full">
+        {!isMobile && (
+          <aside className="w-56 shrink-0 bg-white border-r border-slate-200 min-h-[calc(100vh-64px)] sticky top-16 self-start">
+            <div className="sticky top-16 py-3">
+              {renderNavLinks()}
+            </div>
+          </aside>
+        )}
+
+        <main className="flex-1 min-w-0 w-full overflow-x-hidden pb-12">
+          {children}
+        </main>
+      </div>
+
+      {/* 3. FOOTER NẰM DƯỚI CÙNG TRÀN 100% TOÀN BỘ MÀN HÌNH (FULL WIDTH TỪ TRÁI SANG PHẢI) */}
+      <footer className="w-full bg-[#0c1527] text-white border-t border-slate-800">
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mb-12">
+            {/* Cột 1: Logo & Giới thiệu */}
+            <div className="md:col-span-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#0088cc] text-white flex items-center justify-center text-xl font-black shadow-md">
+                  ❤
+                </div>
+                <span className="text-xl font-black text-white tracking-wider uppercase">
+                  HEALTHCONNECT
+                </span>
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed max-w-sm">
                 Nền tảng kết nối bệnh nhân và bác sĩ, giúp việc đặt lịch khám trở nên đơn giản và thuận tiện.
               </p>
             </div>
 
-            <div>
-              <h3 style={{ color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 16 }}>Về HEALTHCONNECT</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
-                {aboutLinks.map((item) => (
-                  <li key={item.label}>
-                    <Link href={item.href} style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
+            {/* Cột 2: Về HEALTHCONNECT */}
+            <div className="md:col-span-3">
+              <h3 className="text-base font-bold text-white mb-4">
+                Về HEALTHCONNECT
+              </h3>
+              <ul className="space-y-3 text-sm text-slate-300">
+                <li>
+                  <Link href="/about" className="hover:text-white transition-colors">
+                    Về chúng tôi
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-white transition-colors">
+                    Chính sách bảo mật
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors">
+                    Điều khoản sử dụng
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            <div>
-              <h3 style={{ color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 16 }}>Liên kết nhanh</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
-                {quickLinks.map((item) => (
-                  <li key={item.label}>
-                    <Link href={item.href} style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
+            {/* Cột 3: Liên kết nhanh */}
+            <div className="md:col-span-2">
+              <h3 className="text-base font-bold text-white mb-4">
+                Liên kết nhanh
+              </h3>
+              <ul className="space-y-3 text-sm text-slate-300">
+                <li>
+                  <Link href="/" className="hover:text-white transition-colors">
+                    Trang chủ
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/doctors" className="hover:text-white transition-colors">
+                    Bác sĩ
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/specialties" className="hover:text-white transition-colors">
+                    Chuyên khoa
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/booking" className="hover:text-white transition-colors">
+                    Đặt lịch khám
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-white transition-colors">
+                    Liên hệ
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            <div>
-              <h3 style={{ color: '#fff', fontWeight: 700, marginBottom: 16, fontSize: 16 }}>Thông tin liên hệ</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
-                <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
-                  <PhoneOutlined />
+            {/* Cột 4: Thông tin liên hệ */}
+            <div className="md:col-span-3">
+              <h3 className="text-base font-bold text-white mb-4">
+                Thông tin liên hệ
+              </h3>
+              <ul className="space-y-3.5 text-sm text-slate-300">
+                <li className="flex items-center gap-2.5">
+                  <PhoneOutlined className="text-slate-400 text-base" />
                   <span>Hotline: {CONTACT_INFO.hotline}</span>
                 </li>
-                <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
-                  <MailOutlined />
+                <li className="flex items-center gap-2.5">
+                  <MailOutlined className="text-slate-400 text-base" />
                   <span>Email: {CONTACT_INFO.email}</span>
                 </li>
-                <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#cbd5e1' }}>
-                  <EnvironmentOutlined />
-                  <span>Địa chỉ: {CONTACT_INFO.address}</span>
+                <li className="flex items-start gap-2.5">
+                  <EnvironmentOutlined className="text-slate-400 text-base mt-0.5" />
+                  <span className="leading-snug">Địa chỉ: {CONTACT_INFO.address}</span>
                 </li>
               </ul>
             </div>
           </div>
 
-          <div
-            style={{
-              borderTop: '1px solid rgba(148, 163, 184, 0.2)',
-              marginTop: 28,
-              paddingTop: 20,
-              textAlign: 'center',
-              color: '#94a3b8',
-            }}
-          >
+          {/* Dòng bản quyền dưới cùng căn giữa */}
+          <div className="pt-8 border-t border-slate-800/80 text-center text-xs sm:text-sm text-slate-400">
             © 2026 HEALTHCONNECT. Mọi quyền được bảo lưu.
           </div>
         </div>
-      </Footer>
-    </Layout>
+      </footer>
+
+      {/* DRAWER CHO MOBILE */}
+      <Drawer
+        title={
+          <div className="flex items-center gap-2 text-[#1677ff] font-black text-base">
+            <span>❤</span> HEALTHCONNECT
+          </div>
+        }
+        placement="left"
+        onClose={() => setMobileOpen(false)}
+        open={mobileOpen}
+        styles={{ body: { padding: 0 } }}
+      >
+        <div className="flex flex-col h-full justify-between">
+          <div className="py-2">
+            {renderNavLinks(() => setMobileOpen(false))}
+          </div>
+
+          {user && (
+            <div className="p-3 border-t border-slate-100 bg-slate-50">
+              <Button
+                danger
+                block
+                icon={<LogoutOutlined />}
+                onClick={() => {
+                  setMobileOpen(false)
+                  handleLogout()
+                }}
+              >
+                Đăng xuất
+              </Button>
+            </div>
+          )}
+        </div>
+      </Drawer>
+    </div>
   )
 }

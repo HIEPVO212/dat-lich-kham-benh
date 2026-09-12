@@ -1,179 +1,256 @@
 'use client'
-import { useEffect, useState } from 'react'
+
+import React, { useEffect, useState } from 'react'
+import { Form, Input, Button, Card, Avatar, message, Tag, Spin, Divider } from 'antd'
+import {
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  CrownOutlined,
+  SafetyCertificateOutlined,
+  SaveOutlined,
+} from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Form, Input, Button, message, Tabs, Upload, Avatar } from 'antd'
-import { UserOutlined, PhoneOutlined, LockOutlined, UploadOutlined } from '@ant-design/icons'
 import PageLayout from '../../components/PageLayout'
-import { updateProfile, changePassword, uploadAvatar } from '../../lib/auth'
-import { useAuth } from '../../lib/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, loading, refreshUser } = useAuth()
-  const [infoForm] = Form.useForm()
-  const [passForm] = Form.useForm()
-  const [loadingInfo, setLoadingInfo] = useState(false)
-  const [loadingPass, setLoadingPass] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
-    if (!loading && !user) {
-      message.warning('Vui lòng đăng nhập')
-      router.push('/login')
-      return
+    async function loadProfile() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) {
+          message.warning('Vui lòng đăng nhập để xem hồ sơ')
+          router.push('/login')
+          return
+        }
+
+        const user = session.user
+        const email = user.email?.toLowerCase()
+
+        // Lấy thông tin từ bảng users
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        const role =
+          email === 'hiepvo212600@gmail.com'
+            ? 'admin'
+            : dbUser?.role || user.user_metadata?.role || 'user'
+
+        const fullName =
+          dbUser?.full_name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          ''
+
+        const phone = dbUser?.phone || user.user_metadata?.phone || ''
+
+        setUserProfile({
+          id: user.id,
+          email: user.email,
+          fullName,
+          phone,
+          role,
+        })
+
+        form.setFieldsValue({
+          fullName,
+          email: user.email,
+          phone,
+        })
+      } catch (err) {
+        console.error('Lỗi load profile:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    if (user) {
-      infoForm.setFieldsValue({
-        full_name: user.full_name,
-        phone: user.phone,
-        email: user.email,
+
+    loadProfile()
+  }, [router, form])
+
+  async function handleSave(values: any) {
+    setSaving(true)
+    try {
+      if (!userProfile?.id) return
+
+      // Cập nhật bảng users
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: userProfile.id,
+          email: userProfile.email,
+          full_name: values.fullName,
+          phone: values.phone,
+          role: userProfile.role || 'user',
+        })
+
+      if (error) throw error
+
+      // Đồng thời cập nhật auth metadata
+      await supabase.auth.updateUser({
+        data: {
+          full_name: values.fullName,
+          phone: values.phone,
+        },
       })
-    }
-  }, [user, loading, router, infoForm])
 
-  const onUpdateInfo = async (values: { full_name: string; phone: string }) => {
-    if (!user?.id) return
-    setLoadingInfo(true)
-    try {
-      await updateProfile(user.id, values)
-      await refreshUser()
-      message.success('Cập nhật thông tin thành công')
+      message.success('Cập nhật thông tin hồ sơ thành công!')
+      setUserProfile((prev: any) => ({
+        ...prev,
+        fullName: values.fullName,
+        phone: values.phone,
+      }))
     } catch (err: any) {
-      message.error(err.message || 'Cập nhật thất bại')
+      console.error('Lỗi lưu profile:', err)
+      message.error('Không thể cập nhật hồ sơ: ' + err.message)
     } finally {
-      setLoadingInfo(false)
+      setSaving(false)
     }
   }
 
-  const onChangePassword = async (values: { newPassword: string }) => {
-    setLoadingPass(true)
-    try {
-      await changePassword(values.newPassword)
-      message.success('Đổi mật khẩu thành công')
-      passForm.resetFields()
-    } catch (err: any) {
-      message.error(err.message || 'Đổi mật khẩu thất bại')
-    } finally {
-      setLoadingPass(false)
-    }
-  }
-
-  const handleAvatarUpload = async (file: File) => {
-    if (!user?.id) {
-      message.error('Vui lòng đăng nhập tài khoản chính thức để đổi avatar')
-      return false
-    }
-    setUploadingAvatar(true)
-    try {
-      await uploadAvatar(user.id, file)
-      message.success('Cập nhật ảnh đại diện thành công!')
-      await refreshUser() // Cập nhật state toàn cục -> Header tự động đổi avatar tức thì
-    } catch (err: any) {
-      message.error(err.message || 'Upload ảnh thất bại')
-    } finally {
-      setUploadingAvatar(false)
-    }
-    return false
-  }
-
-  if (loading || !user) {
+  if (loading) {
     return (
       <PageLayout>
-        <p style={{ padding: 24 }}>Đang tải thông tin hồ sơ...</p>
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <Spin size="large" tip="Đang tải hồ sơ..." />
+        </div>
       </PageLayout>
     )
   }
 
   return (
     <PageLayout>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '16px 0' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Hồ sơ cá nhân</h1>
+      <div style={{ maxWidth: 700, margin: '0 auto', padding: '24px 12px' }}>
+        <Card
+          style={{
+            borderRadius: 20,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header Hồ sơ */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 20,
+              paddingBottom: 24,
+              borderBottom: '1px solid #f1f5f9',
+            }}
+          >
+            <Avatar
+              size={72}
+              icon={<UserOutlined />}
+              style={{
+                backgroundColor:
+                  userProfile?.role === 'admin'
+                    ? '#f59e0b'
+                    : userProfile?.role === 'member'
+                    ? '#10b981'
+                    : '#0284c7',
+                fontSize: 32,
+              }}
+            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>
+                  {userProfile?.fullName || 'Hồ sơ người dùng'}
+                </h2>
+                {userProfile?.role === 'admin' && (
+                  <Tag icon={<CrownOutlined />} color="gold" style={{ borderRadius: 10 }}>
+                    Quản trị viên
+                  </Tag>
+                )}
+                {userProfile?.role === 'member' && (
+                  <Tag icon={<SafetyCertificateOutlined />} color="green" style={{ borderRadius: 10 }}>
+                    Thành viên
+                  </Tag>
+                )}
+                {userProfile?.role === 'user' && (
+                  <Tag color="blue" style={{ borderRadius: 10 }}>
+                    Người dùng
+                  </Tag>
+                )}
+              </div>
+              <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: 13.5 }}>
+                {userProfile?.email}
+              </p>
+            </div>
+          </div>
 
-        <Tabs
-          items={[
-            {
-              key: 'info',
-              label: 'Thông tin cá nhân',
-              children: (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
-                    <Avatar
-                      size={72}
-                      src={user.avatar_url}
-                      icon={!user.avatar_url && <UserOutlined />}
-                      style={{ background: '#1d4ed8' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>Ảnh đại diện</div>
-                      <Upload
-                        beforeUpload={handleAvatarUpload}
-                        showUploadList={false}
-                        accept="image/*"
-                      >
-                        <Button icon={<UploadOutlined />} loading={uploadingAvatar}>
-                          Tải ảnh mới lên
-                        </Button>
-                      </Upload>
-                    </div>
-                  </div>
+          {/* Form chỉnh sửa */}
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', marginBottom: 16 }}>
+              Thông tin cá nhân
+            </h3>
 
-                  <Form form={infoForm} layout="vertical" onFinish={onUpdateInfo} style={{ maxWidth: 420 }}>
-                    <Form.Item name="email" label="Email">
-                      <Input disabled prefix={<UserOutlined />} />
-                    </Form.Item>
-                    <Form.Item name="full_name" label="Họ tên" rules={[{ required: true, message: 'Nhập họ tên' }]}>
-                      <Input prefix={<UserOutlined />} />
-                    </Form.Item>
-                    <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Nhập số điện thoại' }]}>
-                      <Input prefix={<PhoneOutlined />} />
-                    </Form.Item>
-                    <Form.Item>
-                      <Button type="primary" htmlType="submit" loading={loadingInfo}>
-                        Lưu thay đổi
-                      </Button>
-                    </Form.Item>
-                  </Form>
-                </div>
-              ),
-            },
-            {
-              key: 'password',
-              label: 'Đổi mật khẩu',
-              children: (
-                <Form form={passForm} layout="vertical" onFinish={onChangePassword} style={{ maxWidth: 420 }}>
-                  <Form.Item
-                    name="newPassword"
-                    label="Mật khẩu mới"
-                    rules={[{ required: true, message: 'Nhập mật khẩu mới' }, { min: 6, message: 'Tối thiểu 6 ký tự' }]}
-                  >
-                    <Input.Password prefix={<LockOutlined />} />
-                  </Form.Item>
-                  <Form.Item
-                    name="confirmNew"
-                    label="Xác nhận mật khẩu mới"
-                    dependencies={['newPassword']}
-                    rules={[
-                      { required: true, message: 'Nhập lại mật khẩu mới' },
-                      ({ getFieldValue }) => ({
-                        validator(_, value) {
-                          if (!value || getFieldValue('newPassword') === value) return Promise.resolve()
-                          return Promise.reject(new Error('Mật khẩu xác nhận không khớp'))
-                        },
-                      }),
-                    ]}
-                  >
-                    <Input.Password prefix={<LockOutlined />} />
-                  </Form.Item>
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" loading={loadingPass}>
-                      Đổi mật khẩu
-                    </Button>
-                  </Form.Item>
-                </Form>
-              ),
-            },
-          ]}
-        />
+            <Form form={form} layout="vertical" onFinish={handleSave}>
+              <Form.Item
+                name="fullName"
+                label={<span style={{ fontWeight: 600 }}>Họ và tên</span>}
+                rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+              >
+                <Input
+                  prefix={<UserOutlined style={{ color: '#94a3b8' }} />}
+                  size="large"
+                  placeholder="Nhập họ và tên"
+                  style={{ borderRadius: 10 }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="email"
+                label={<span style={{ fontWeight: 600 }}>Email (Tài khoản)</span>}
+              >
+                <Input
+                  prefix={<MailOutlined style={{ color: '#94a3b8' }} />}
+                  size="large"
+                  disabled
+                  style={{ borderRadius: 10, backgroundColor: '#f8fafc', color: '#64748b' }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label={<span style={{ fontWeight: 600 }}>Số điện thoại liên hệ</span>}
+              >
+                <Input
+                  prefix={<PhoneOutlined style={{ color: '#94a3b8' }} />}
+                  size="large"
+                  placeholder="Nhập số điện thoại của bạn"
+                  style={{ borderRadius: 10 }}
+                />
+              </Form.Item>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 28 }}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<SaveOutlined />}
+                  loading={saving}
+                  size="large"
+                  style={{
+                    backgroundColor: '#0284c7',
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    padding: '0 24px',
+                  }}
+                >
+                  Lưu thay đổi
+                </Button>
+              </div>
+            </Form>
+          </div>
+        </Card>
       </div>
     </PageLayout>
   )

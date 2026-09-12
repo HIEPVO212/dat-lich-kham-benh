@@ -33,7 +33,7 @@ import { supabase } from '../../lib/supabase'
 
 const { Search } = Input
 
-// Bảng màu pastel & nút bấm theo từng chuyên khoa
+// Bảng màu giao diện theo từng chuyên khoa
 const specialtyTheme: Record<
   string,
   {
@@ -170,7 +170,42 @@ function DoctorsContent() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(6)
 
-  // Cập nhật khi URL thay đổi
+  // Biến kiểm tra người dùng hiện tại có phải là ADMIN không
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Modal Thêm Bác sĩ
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState('')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [form] = Form.useForm()
+
+  // 1. Kiểm tra vai trò Admin
+  useEffect(() => {
+    async function checkAdminRole() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const email = session.user.email?.toLowerCase()
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle()
+
+          const role = profile?.role || session.user.user_metadata?.role
+          if (email === 'hiepvo212600@gmail.com' || role === 'admin') {
+            setIsAdmin(true)
+          }
+        }
+      } catch (err) {
+        console.warn('Lỗi kiểm tra quyền admin:', err)
+      }
+    }
+    checkAdminRole()
+  }, [])
+
+  // Cập nhật khi URL có tham số chuyên khoa
   useEffect(() => {
     const urlSpec = searchParams.get('specialty') || searchParams.get('specialtyName')
     if (urlSpec) {
@@ -179,17 +214,10 @@ function DoctorsContent() {
     }
   }, [searchParams])
 
-  // State Modal Thêm Bác sĩ
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState('')
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [form] = Form.useForm()
-
+  // 2. Tải danh sách bác sĩ & chuyên khoa từ CSDL
   async function loadData() {
     setLoading(true)
     try {
-      // 1. Tải danh sách bác sĩ từ bảng doctor
       const { data: doctorList, error } = await supabase
         .from('doctor')
         .select('*')
@@ -197,7 +225,6 @@ function DoctorsContent() {
 
       if (error) throw error
 
-      // 2. Tải danh sách chuyên khoa từ bảng specialty
       const { data: specs } = await supabase.from('specialty').select('*')
       const specMap = new Map<string, string>()
       const specArr: SpecialtyItem[] = []
@@ -212,7 +239,6 @@ function DoctorsContent() {
       }
       setSpecialties(specArr)
 
-      // 3. Tải thông tin cơ sở/bệnh viện
       const { data: primaryFacilities } = await supabase
         .from('doctor_primary_facility')
         .select('*')
@@ -222,13 +248,12 @@ function DoctorsContent() {
         primaryFacilities.forEach((f: any) => {
           const docId = String(f.doctor_id)
           facilityMap.set(docId, {
-            name: f.facility_name || f.name || f.hospital_name || 'Bệnh viện Chợ Rẫy',
+            name: f.facility_name || f.name || f.hospital_name || 'Chưa cập nhật cơ sở',
             address: f.facility_address || f.address || 'TP. Hồ Chí Minh',
           })
         })
       }
 
-      // 4. Map dữ liệu bác sĩ
       const mapped: Doctor[] = (doctorList || []).map((doc: any) => {
         const docId = String(doc.doctor_id || doc.id)
         const specId = String(doc.specialty_id || '')
@@ -238,13 +263,9 @@ function DoctorsContent() {
 
         const fac = facilityMap.get(docId)
         const hospitalName =
-          doc.hospital ||
           fac?.name ||
-          (Number(docId) % 3 === 0
-            ? 'Bệnh viện Chợ Rẫy'
-            : Number(docId) % 3 === 1
-            ? 'Bệnh viện Đại học Y Dược TP.HCM'
-            : 'Bệnh viện Thống Nhất')
+          doc.hospital ||
+          'Chưa cập nhật cơ sở'
 
         return {
           id: docId,
@@ -274,7 +295,7 @@ function DoctorsContent() {
     loadData()
   }, [])
 
-  // Xử lý upload ảnh trực tiếp lên Supabase Storage
+  // Upload ảnh đại diện bác sĩ lên Supabase
   async function handleUploadAvatar(file: File) {
     setUploadingAvatar(true)
     try {
@@ -296,14 +317,14 @@ function DoctorsContent() {
       message.success('Đã tải ảnh lên Supabase thành công!')
     } catch (err: any) {
       console.error('Lỗi upload ảnh:', err)
-      message.error('Lỗi tải ảnh lên Supabase: ' + (err.message || 'Kiểm tra bucket avatars'))
+      message.error('Lỗi tải ảnh lên Supabase: ' + (err.message || 'Vui lòng thử lại'))
     } finally {
       setUploadingAvatar(false)
     }
     return false
   }
 
-  // Bật/tắt trạng thái nhận lịch
+  // 3. Admin Bật / Tắt trạng thái nhận lịch của bác sĩ
   async function handleToggleAvailability(id: string, currentStatus: boolean) {
     const newStatus = !currentStatus
     setDoctors((prev) =>
@@ -313,24 +334,33 @@ function DoctorsContent() {
     try {
       const { error } = await supabase
         .from('doctor')
-        .update({ available: newStatus })
+        .update({
+          available: newStatus,
+          is_accepting_bookings: newStatus,
+        })
         .eq('doctor_id', id)
 
       if (error) {
-        console.warn('Lỗi cập nhật server:', error.message)
+        await supabase
+          .from('doctor')
+          .update({ available: newStatus })
+          .eq('id', id)
+      }
+
+      if (newStatus) {
+        message.success('Đã mở nhận lịch khám cho bác sĩ')
       } else {
-        if (newStatus) {
-          message.success('Đã mở nhận lịch khám cho bác sĩ')
-        } else {
-          message.info('Đã chuyển bác sĩ sang trạng thái Tạm kín lịch')
-        }
+        message.info('Đã chuyển bác sĩ sang trạng thái Tạm kín lịch')
       }
     } catch (err: any) {
       console.error('Lỗi cập nhật trạng thái:', err)
+      setDoctors((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, available: currentStatus } : d))
+      )
     }
   }
 
-  // Xóa bác sĩ
+  // 4. Admin Xóa bác sĩ
   async function handleDeleteDoctor(id: string) {
     try {
       const { error } = await supabase
@@ -344,11 +374,11 @@ function DoctorsContent() {
       setDoctors((prev) => prev.filter((d) => d.id !== id))
     } catch (err: any) {
       console.error('Lỗi xóa bác sĩ:', err)
-      message.error('Không thể xóa bác sĩ: ' + (err.message || 'Lỗi server'))
+      message.error('Không thể xóa bác sĩ: ' + (err.message || 'Lỗi'))
     }
   }
 
-  // Thêm bác sĩ mới
+  // 5. Admin Thêm bác sĩ mới
   async function handleAddDoctor(values: any) {
     setSubmitting(true)
     try {
@@ -368,7 +398,7 @@ function DoctorsContent() {
         {
           ...payload,
           available: values.available ?? true,
-          hospital: values.hospital || 'Bệnh viện Chợ Rẫy',
+          hospital: values.hospital || 'Chưa cập nhật cơ sở',
         },
       ])
 
@@ -392,7 +422,7 @@ function DoctorsContent() {
     }
   }
 
-  // LỌC CHUẨN XÁC: So sánh không phân biệt hoa thường và hỗ trợ cả slug/tên chuyên khoa
+  // Lọc theo từ khóa và chuyên khoa
   const filtered = doctors.filter((doc) => {
     const matchName = doc.name.toLowerCase().includes(search.toLowerCase())
     const matchHospital = doc.hospital.toLowerCase().includes(search.toLowerCase())
@@ -412,7 +442,7 @@ function DoctorsContent() {
   return (
     <PageLayout>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 8px' }}>
-        {/* Tiêu đề & Nút Thêm */}
+        {/* Thanh tiêu đề */}
         <div
           style={{
             display: 'flex',
@@ -432,27 +462,30 @@ function DoctorsContent() {
             </p>
           </div>
 
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            style={{
-              borderRadius: 10,
-              fontWeight: 600,
-              backgroundColor: '#0284c7',
-              boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
-            }}
-            onClick={() => {
-              setUploadedAvatarUrl('')
-              form.resetFields()
-              setIsModalOpen(true)
-            }}
-          >
-            Thêm bác sĩ
-          </Button>
+          {/* CHỈ HIỂN THỊ NÚT "THÊM BÁC SĨ" KHI LÀ ADMIN */}
+          {isAdmin && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              size="large"
+              style={{
+                borderRadius: 10,
+                fontWeight: 600,
+                backgroundColor: '#0284c7',
+                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
+              }}
+              onClick={() => {
+                setUploadedAvatarUrl('')
+                form.resetFields()
+                setIsModalOpen(true)
+              }}
+            >
+              Thêm bác sĩ
+            </Button>
+          )}
         </div>
 
-        {/* Thanh tìm kiếm, lọc & Phân trang */}
+        {/* Thanh tìm kiếm & bộ lọc */}
         <div
           style={{
             display: 'flex',
@@ -504,7 +537,7 @@ function DoctorsContent() {
           />
         </div>
 
-        {/* Lưới danh sách bác sĩ */}
+        {/* Lưới thẻ danh sách bác sĩ */}
         <div
           style={{
             display: 'grid',
@@ -538,81 +571,83 @@ function DoctorsContent() {
                     transition: 'all 0.25s ease',
                   }}
                 >
-                  {/* Góc trên bên phải: Công tắc Nhận lịch + Nút Xóa */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 14,
-                      right: 14,
-                      zIndex: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <Tooltip
-                      title={
-                        isAvailable
-                          ? 'Đang nhận lịch (Click để đóng lịch)'
-                          : 'Tạm kín lịch (Click để mở lại lịch)'
-                      }
+                  {/* CÔNG TẮC ĐÓNG/MỞ LỊCH & NÚT XÓA: CHỈ HIỂN THỊ KHI LÀ ADMIN */}
+                  {isAdmin && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 14,
+                        right: 14,
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
                     >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          backgroundColor: '#ffffff',
-                          padding: '3px 8px',
-                          borderRadius: 20,
-                          border: `1px solid ${isAvailable ? '#bbf7d0' : '#e2e8f0'}`,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                        }}
+                      <Tooltip
+                        title={
+                          isAvailable
+                            ? 'Đang nhận lịch (Click để đóng lịch)'
+                            : 'Tạm kín lịch (Click để mở lại lịch)'
+                        }
                       >
-                        <Switch
-                          size="small"
-                          checked={isAvailable}
-                          checkedChildren={<CheckCircleOutlined />}
-                          unCheckedChildren={<StopOutlined />}
+                        <div
                           style={{
-                            backgroundColor: isAvailable ? '#10b981' : '#94a3b8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            backgroundColor: '#ffffff',
+                            padding: '3px 8px',
+                            borderRadius: 20,
+                            border: `1px solid ${isAvailable ? '#bbf7d0' : '#e2e8f0'}`,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                           }}
-                          onChange={() => handleToggleAvailability(doc.id, isAvailable)}
-                        />
-                      </div>
-                    </Tooltip>
+                        >
+                          <Switch
+                            size="small"
+                            checked={isAvailable}
+                            checkedChildren={<CheckCircleOutlined />}
+                            unCheckedChildren={<StopOutlined />}
+                            style={{
+                              backgroundColor: isAvailable ? '#10b981' : '#94a3b8',
+                            }}
+                            onChange={() => handleToggleAvailability(doc.id, isAvailable)}
+                          />
+                        </div>
+                      </Tooltip>
 
-                    <Popconfirm
-                      title="Xóa bác sĩ"
-                      description={`Bạn có chắc muốn xóa ${doc.name}?`}
-                      onConfirm={() => handleDeleteDoctor(doc.id)}
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      okButtonProps={{ danger: true }}
-                    >
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined style={{ fontSize: 15 }} />}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #fee2e2',
-                          borderRadius: 8,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                          padding: '2px 8px',
-                          height: 26,
-                        }}
-                      />
-                    </Popconfirm>
-                  </div>
+                      <Popconfirm
+                        title="Xóa bác sĩ"
+                        description={`Bạn có chắc muốn xóa ${doc.name}?`}
+                        onConfirm={() => handleDeleteDoctor(doc.id)}
+                        okText="Xóa"
+                        cancelText="Hủy"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined style={{ fontSize: 15 }} />}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #fee2e2',
+                            borderRadius: 8,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            padding: '2px 8px',
+                            height: 26,
+                          }}
+                        />
+                      </Popconfirm>
+                    </div>
+                  )}
 
                   <div>
-                    {/* Hàng trên: Avatar + Tên + Tag chuyên khoa */}
+                    {/* Avatar + Tên + Chuyên khoa */}
                     <div
                       style={{
                         display: 'flex',
                         gap: 16,
                         alignItems: 'center',
-                        paddingRight: 80,
+                        paddingRight: isAdmin ? 80 : 0,
                       }}
                     >
                       <img
@@ -662,7 +697,7 @@ function DoctorsContent() {
                       </div>
                     </div>
 
-                    {/* Vị trí địa chỉ bệnh viện */}
+                    {/* Cơ sở y tế / Bệnh viện */}
                     <div
                       style={{
                         marginTop: 14,
@@ -680,7 +715,7 @@ function DoctorsContent() {
                       </span>
                     </div>
 
-                    {/* Rating 5 sao */}
+                    {/* Đánh giá sao */}
                     <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
                       {[1, 2, 3, 4, 5].map((s) => (
                         <StarFilled key={s} style={{ color: '#f59e0b', fontSize: 13 }} />
@@ -697,7 +732,7 @@ function DoctorsContent() {
                       </span>
                     </div>
 
-                    {/* Mô tả ngắn */}
+                    {/* Mô tả */}
                     <p
                       style={{
                         margin: '10px 0 18px 0',
@@ -760,7 +795,7 @@ function DoctorsContent() {
           )}
         </div>
 
-        {/* Modal Thêm Bác sĩ */}
+        {/* Modal Thêm Bác sĩ (Dành riêng cho Admin) */}
         <Modal
           title={<span style={{ fontSize: 18, fontWeight: 700 }}>Thêm Bác Sĩ Mới</span>}
           open={isModalOpen}
@@ -774,7 +809,7 @@ function DoctorsContent() {
             onFinish={handleAddDoctor}
             initialValues={{
               academic_title: 'BS.CKI',
-              hospital: 'Bệnh viện Chợ Rẫy',
+              hospital: 'Chưa cập nhật cơ sở',
               experience_years: 5,
               available: true,
               specialty_id: specialties[0]?.id || 1,

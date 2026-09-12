@@ -1,108 +1,235 @@
 'use client'
-import { useRouter } from 'next/navigation'
-import { Layout, Button, Avatar, Dropdown, Tag } from 'antd'
-import { HeartFilled, UserOutlined, LogoutOutlined, CrownOutlined, MenuOutlined } from '@ant-design/icons'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '../lib/AuthContext'
+import { useRouter } from 'next/navigation'
+import { Drawer, Avatar, Dropdown, MenuProps, Button } from 'antd'
+import {
+  MenuOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  ClockCircleOutlined,
+  HomeOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  AppstoreOutlined,
+  PhoneOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+} from '@ant-design/icons'
+import { supabase } from '../lib/supabase'
 
-const { Header: AntHeader } = Layout
-
-const roleLabel: Record<string, string> = {
-  admin: 'Quản trị viên',
-  doctor: 'Bác sĩ',
-  patient: 'Bệnh nhân',
-}
+const menuItems = [
+  { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
+  { key: '/booking', label: 'Đặt lịch khám', icon: <CalendarOutlined /> },
+  { key: '/doctors', label: 'Bác sĩ', icon: <TeamOutlined /> },
+  { key: '/appointments', label: 'Lịch hẹn', icon: <ClockCircleOutlined /> },
+  { key: '/services', label: 'Dịch vụ', icon: <AppstoreOutlined /> },
+  { key: '/contact', label: 'Liên hệ', icon: <PhoneOutlined /> },
+  { key: '/profile', label: 'Hồ sơ', icon: <UserOutlined /> },
+  { key: '/dashboard', label: 'Tổng quan', icon: <DashboardOutlined /> },
+  { key: '/admin', label: 'Quản trị hệ thống', icon: <SettingOutlined /> },
+]
 
 export default function Header() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const handleLogout = async () => {
-    await logout()
-    router.push('/dashboard')
+    await supabase.auth.signOut()
+    setUser(null)
+    router.push('/')
   }
 
-  const toggleMobileMenu = () => {
-    window.dispatchEvent(new CustomEvent('healthconnect:toggle-mobile-menu'))
-  }
-
-  const menuItems = [
-    { key: 'profile', label: <Link href="/profile">Hồ sơ của tôi</Link>, icon: <UserOutlined /> },
-    { key: 'logout', label: 'Đăng xuất', icon: <LogoutOutlined />, onClick: handleLogout },
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: <Link href="/profile">Hồ sơ cá nhân</Link>,
+    },
+    {
+      key: 'appointments',
+      icon: <ClockCircleOutlined />,
+      label: <Link href="/appointments">Lịch hẹn của tôi</Link>,
+    },
+    {
+      key: 'admin',
+      icon: <SettingOutlined />,
+      label: <Link href="/admin">Quản trị hệ thống</Link>,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      danger: true,
+      label: 'Đăng xuất',
+      onClick: handleLogout,
+    },
   ]
 
   return (
-    <AntHeader
-      className="app-header"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        background: 'linear-gradient(90deg, #0891b2, #1d4ed8)',
-        padding: '0 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 2px 8px rgba(0,0,0,.12)',
-      }}
-    >
-      <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: 12,
-            width: 36,
-            height: 36,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <HeartFilled style={{ color: '#fff', fontSize: 18 }} />
-        </div>
-        <span className="app-brand-name" style={{ color: '#fff', fontSize: 18, fontWeight: 900, letterSpacing: '0.18em' }}>
-          HEALTHCONNECT
-        </span>
-      </Link>
+    <>
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          backgroundColor: '#0088cc',
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 20px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Nút 3 gạch mở menu trên điện thoại / màn hình nhỏ */}
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              fontSize: 20,
+              cursor: 'pointer',
+              padding: 4,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <MenuOutlined />
+          </button>
 
-      <Button
-        className="mobile-menu-button"
-        type="text"
-        icon={<MenuOutlined />}
-        aria-label="Mở menu điều hướng"
-        onClick={toggleMobileMenu}
-      />
-
-      {user ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {user.role === 'admin' && (
-            <Tag icon={<CrownOutlined />} color="gold">
-              Admin
-            </Tag>
-          )}
-          <Dropdown menu={{ items: menuItems }} placement="bottomRight">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#fff' }}>
-              <Avatar
-                src={user.avatar_url}
-                icon={!user.avatar_url && <UserOutlined />}
-                style={{ background: '#fff', color: '#1d4ed8' }}
-              />
-              <div className="app-user-details" style={{ lineHeight: 1.2 }}>
-                <div className="app-user-name">{user.full_name || user.email}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
-                  {roleLabel[user.role ?? ''] || 'Thành viên'}
-                </div>
-              </div>
+          <Link
+            href="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              textDecoration: 'none',
+            }}
+          >
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0088cc',
+                fontWeight: 900,
+                fontSize: 18,
+              }}
+            >
+              ❤
             </div>
-          </Dropdown>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: '#fff',
+                letterSpacing: 1,
+              }}
+            >
+              HEALTHCONNECT
+            </span>
+          </Link>
         </div>
-      ) : (
-        <Link href="/login">
-          <Button type="primary" ghost style={{ borderColor: '#fff', color: '#fff' }}>
-            Đăng nhập
-          </Button>
-        </Link>
-      )}
-    </AntHeader>
+
+        {/* User / Login */}
+        <div>
+          {user ? (
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  cursor: 'pointer',
+                }}
+              >
+                <Avatar size={28} icon={<UserOutlined />} style={{ backgroundColor: '#fff', color: '#0088cc' }} />
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>
+                  {user.user_metadata?.full_name || user.email?.split('@')[0] || 'Người dùng'}
+                </span>
+              </div>
+            </Dropdown>
+          ) : (
+            <Link
+              href="/login"
+              style={{
+                color: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                padding: '6px 14px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              Đăng nhập
+            </Link>
+          )}
+        </div>
+      </header>
+
+      {/* Menu dạng trượt cho màn hình nhỏ */}
+      <Drawer
+        title="HEALTHCONNECT"
+        placement="left"
+        onClose={() => setDrawerOpen(false)}
+        open={drawerOpen}
+        styles={{ body: { padding: '12px 8px' } }}
+        size="default"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {menuItems.map((item) => (
+            <Link
+              key={item.key}
+              href={item.key}
+              onClick={() => setDrawerOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                fontSize: 15,
+                fontWeight: 600,
+                color: '#334155',
+              }}
+            >
+              <span style={{ fontSize: 18, color: '#0088cc' }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </Drawer>
+    </>
   )
 }

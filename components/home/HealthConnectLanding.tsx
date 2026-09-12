@@ -206,6 +206,10 @@ export default function HealthConnectLanding() {
     }
   }
 
+  const averageRating = reviews.length
+    ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+    : '0.0'
+
   useEffect(() => {
     getLatestAppointment()
       .then(setLatestAppointment)
@@ -336,6 +340,8 @@ export default function HealthConnectLanding() {
                     <div className="text-2xl font-black text-slate-900">
                       {item.label === 'Bệnh nhân tin tưởng'
                         ? completedPatientCount.toLocaleString('vi-VN')
+                        : item.label === 'Đánh giá trung bình'
+                        ? `${averageRating}/5`
                         : item.value}
                     </div>
                     <div className="mt-1 text-xs text-slate-600">{item.label}</div>
@@ -614,16 +620,28 @@ export default function HealthConnectLanding() {
 
         <section className="bg-white py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto mt-16 max-w-2xl text-center">
+            <div className="mx-auto mt-16 max-w-3xl text-center">
               <div className="inline-flex rounded-full bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700">
                 Khách hàng tin tưởng
               </div>
               <h2 className="mt-5 text-3xl font-black text-slate-900 sm:text-4xl">
                 Trải nghiệm đặt lịch được đánh giá cao
               </h2>
+              <div className="mt-6 inline-flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-left">
+                <div className="text-3xl font-black text-slate-900">{averageRating}</div>
+                <div>
+                  <div className="flex gap-1 text-lg text-amber-400" aria-label={`${averageRating} trên 5 sao`}>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <span key={index}>{index < Math.round(Number(averageRating)) ? '★' : '☆'}</span>
+                    ))}
+                  </div>
+                  <div className="text-xs text-slate-500">{reviews.length} lượt đánh giá đã xác minh</div>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {reviews.length > 0 ? (
+              <div className="mt-12 grid gap-6 lg:grid-cols-3">
               {reviews.slice(0, 3).map((testimonial) => (
                 <div key={testimonial.id} className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 shadow-sm">
                   <div className="mb-5 flex items-center justify-between">
@@ -647,26 +665,30 @@ export default function HealthConnectLanding() {
                     <div className="font-bold text-slate-900">{testimonial.full_name}</div>
                     <div className="text-sm text-slate-500">Bệnh nhân</div>
                   </div>
-                  {reviews.length === 0 && (
-                    <p className="mt-8 text-center text-slate-500">Chưa có đánh giá nào. Hãy là người đầu tiên chia sẻ trải nghiệm.</p>
-                  )}
-                  {reviewUser && (
-                    <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-cyan-100 bg-cyan-50 p-5">
-                      <h3 className="font-bold text-slate-900">Chia sẻ trải nghiệm của bạn</h3>
-                      <div className="mt-3 flex gap-2">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <button key={index} type="button" onClick={() => setReviewRating(index + 1)} className={index < reviewRating ? 'text-amber-400' : 'text-slate-300'}>★</button>
-                        ))}
-                      </div>
-                      <textarea value={reviewText} onChange={(event) => setReviewText(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3" rows={3} placeholder="Nhập đánh giá của bạn..." />
-                      <button type="button" onClick={submitReview} disabled={reviewLoading || !reviewText.trim()} className="mt-3 rounded-full bg-cyan-600 px-5 py-2 font-semibold text-white disabled:opacity-50">
-                        {reviewLoading ? 'Đang gửi...' : 'Gửi đánh giá'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-12 rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-slate-500">
+                Chưa có đánh giá nào. Hãy là người đầu tiên chia sẻ trải nghiệm.
+              </div>
+            )}
+
+            {reviewUser && (
+              <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-cyan-100 bg-cyan-50 p-5">
+                <h3 className="font-bold text-slate-900">Chia sẻ trải nghiệm của bạn</h3>
+                <p className="mt-1 text-sm text-slate-600">Đánh giá thực tế giúp người khác chọn lịch khám phù hợp hơn.</p>
+                <div className="mt-3 flex gap-2">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <button key={index} type="button" aria-label={`${index + 1} sao`} onClick={() => setReviewRating(index + 1)} className={index < reviewRating ? 'text-amber-400' : 'text-slate-300'}>★</button>
+                  ))}
+                </div>
+                <textarea value={reviewText} onChange={(event) => setReviewText(event.target.value)} className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3" rows={3} placeholder="Ví dụ: Đặt lịch nhanh, bác sĩ tư vấn rõ ràng..." />
+                <button type="button" onClick={submitReview} disabled={reviewLoading || !reviewText.trim()} className="mt-3 rounded-full bg-cyan-600 px-5 py-2 font-semibold text-white disabled:opacity-50">
+                  {reviewLoading ? 'Đang gửi...' : 'Gửi đánh giá'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

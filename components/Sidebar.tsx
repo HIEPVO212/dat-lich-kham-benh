@@ -1,82 +1,95 @@
 'use client'
-import { Drawer, Layout, Menu } from 'antd'
-import { useEffect, useState } from 'react'
-import {
-  HomeOutlined,
-  DashboardOutlined,
-  CalendarOutlined,
-  TeamOutlined,
-  FileTextOutlined,
-  MedicineBoxOutlined,
-  UserOutlined,
-  PhoneOutlined,
-} from '@ant-design/icons'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import {
+  HomeOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  ClockCircleOutlined,
+  AppstoreOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+} from '@ant-design/icons'
 
-const { Sider } = Layout
-
-const items = [
-  { key: '/', icon: <HomeOutlined />, label: <Link href="/">Trang chủ</Link> },
-  { key: '/booking', icon: <CalendarOutlined />, label: <Link href="/booking">Đặt lịch khám</Link> },
-  { key: '/doctors', icon: <TeamOutlined />, label: <Link href="/doctors">Bác sĩ</Link> },
-  { key: '/appointments', icon: <FileTextOutlined />, label: <Link href="/appointments">Lịch hẹn</Link> },
-  { key: '/services', icon: <MedicineBoxOutlined />, label: <Link href="/services">Dịch vụ</Link> },
-  { key: '/contact', icon: <PhoneOutlined />, label: <Link href="/contact">Liên hệ</Link> },
-  { key: '/profile', icon: <UserOutlined />, label: <Link href="/profile">Hồ sơ</Link> },
-  { key: '/dashboard', icon: <DashboardOutlined />, label: <Link href="/dashboard">Tổng quan</Link> },
+const menuItems = [
+  { key: '/', label: 'Trang chủ', icon: <HomeOutlined /> },
+  { key: '/booking', label: 'Đặt lịch khám', icon: <CalendarOutlined /> },
+  { key: '/doctors', label: 'Bác sĩ', icon: <TeamOutlined /> },
+  { key: '/appointments', label: 'Lịch hẹn', icon: <ClockCircleOutlined /> },
+  { key: '/services', label: 'Dịch vụ', icon: <AppstoreOutlined /> },
+  { key: '/contact', label: 'Liên hệ', icon: <PhoneOutlined /> },
+  { key: '/profile', label: 'Hồ sơ', icon: <UserOutlined /> },
+  { key: '/dashboard', label: 'Tổng quan', icon: <DashboardOutlined /> },
+  { key: '/admin', label: 'Quản trị hệ thống', icon: <SettingOutlined /> },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
+  // Tự động kiểm tra độ rộng màn hình bằng JavaScript, không lo Tailwind bị đè!
   useEffect(() => {
-    const toggleMobileMenu = () => setMobileOpen((open) => !open)
-    window.addEventListener('healthconnect:toggle-mobile-menu', toggleMobileMenu)
-    return () => window.removeEventListener('healthconnect:toggle-mobile-menu', toggleMobileMenu)
+    function checkWidth() {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkWidth()
+    window.addEventListener('resize', checkWidth)
+    return () => window.removeEventListener('resize', checkWidth)
   }, [])
 
-  const navigationMenu = (
-    <Menu
-      mode="inline"
-      selectedKeys={[pathname]}
-      items={items}
-      style={{ height: '100%', borderRight: 0, paddingTop: 12, fontSize: 15 }}
-      onClick={() => setMobileOpen(false)}
-    />
-  )
+  // Nếu màn hình hẹp (chia đôi màn hình, iPad, điện thoại) -> BIẾN MẤT HOÀN TOÀN KHÔNG RÁC GIAO DIỆN
+  if (isMobile) {
+    return null
+  }
 
   return (
-    <>
-    <Sider
-      className="app-sidebar"
-      width={230}
-      breakpoint="md"
-      collapsedWidth={0}
+    <aside
       style={{
+        width: 220,
+        minWidth: 220,
+        flexShrink: 0,
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        minHeight: 'calc(100vh - 64px)',
+        padding: '16px 10px',
         position: 'sticky',
         top: 64,
-        height: 'calc(100vh - 64px)',
         alignSelf: 'flex-start',
-        background: '#fff',
-        borderRight: '1px solid #f0f0f0',
-        overflow: 'auto',
       }}
     >
-      {navigationMenu}
-    </Sider>
-    <Drawer
-      className="mobile-navigation-drawer"
-      title="Menu HEALTHCONNECT"
-      placement="left"
-      width={230}
-      open={mobileOpen}
-      onClose={() => setMobileOpen(false)}
-      styles={{ body: { padding: 0 } }}
-    >
-      {navigationMenu}
-    </Drawer>
-    </>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {menuItems.map((item) => {
+          const isActive =
+            item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)
+
+          return (
+            <Link
+              key={item.key}
+              href={item.key}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 16px',
+                borderRadius: 10,
+                textDecoration: 'none',
+                fontSize: 14,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? '#2563eb' : '#475569',
+                backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </aside>
   )
 }

@@ -59,7 +59,7 @@ export async function getDoctors(): Promise<Doctor[]> {
         full_name: fullName,
         academic_title: doc.academic_title || null,
         specialty_name: specMap.get(specId) || doc.specialty_name || 'Đa khoa',
-        hospital: facilityMap.get(docId) || doc.hospital || 'Bệnh viện Chợ Rẫy',
+        hospital: facilityMap.get(docId) || doc.hospital || 'Chưa cập nhật cơ sở',
         experience_years: doc.experience_years || 8,
         avatar_url: doc.avatar_url || 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300',
         is_accepting_bookings: true,
