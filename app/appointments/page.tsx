@@ -47,8 +47,12 @@ export default function AppointmentsPage() {
         query1 = query1.eq('patient_id', user.id)
       }
 
-      // SẮP XẾP MỚI NHẤT LÊN ĐẦU: id giảm dần, created_at giảm dần
-      const { data: list1, error: err1 } = await query1.order('id', { ascending: false })
+      // created_at phản ánh đúng thứ tự đặt lịch; id chỉ dùng để ổn định thứ tự khi trùng thời điểm.
+      const { data: list1, error: err1 } = await query1
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+
+      if (err1) throw err1
 
       let rawList = list1 || []
 
@@ -57,6 +61,7 @@ export default function AppointmentsPage() {
         const { data: list2 } = await supabase
           .from('appointment')
           .select('*')
+          .order('created_at', { ascending: false })
           .order('appointment_id', { ascending: false })
         if (list2 && list2.length > 0) {
           rawList = list2
@@ -86,7 +91,7 @@ export default function AppointmentsPage() {
         ])
       )
 
-      // Ghép thông tin bác sĩ & SẮP XẾP LẠI 1 LẦN NỮA ĐẢM BẢO MỚI NHẤT LUÔN Ở ĐẦU
+      // Ghép thông tin bác sĩ và giữ thứ tự tạo lịch mới nhất ở đầu.
       const mapped = rawList.map((item: any) => {
         const doc = docList.find(
           (d: any) => String(d.doctor_id || d.id) === String(item.doctor_id)
@@ -106,11 +111,15 @@ export default function AppointmentsPage() {
         }
       })
 
-      // Sắp xếp JavaScript: Ưu tiên created_at hoặc id giảm dần
+      // Dữ liệu cũ có thể thiếu created_at, nên dùng id làm fallback.
       mapped.sort((a: any, b: any) => {
-        const idA = a.id || a.appointment_id || 0
-        const idB = b.id || b.appointment_id || 0
-        return idB - idA
+        const createdA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const createdB = b.created_at ? new Date(b.created_at).getTime() : 0
+        if (createdA !== createdB) return createdB - createdA
+
+        const idA = String(a.id || a.appointment_id || '')
+        const idB = String(b.id || b.appointment_id || '')
+        return idB.localeCompare(idA, undefined, { numeric: true })
       })
 
       setAppointments(mapped)
