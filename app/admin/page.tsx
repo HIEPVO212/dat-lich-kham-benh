@@ -24,6 +24,7 @@ import {
   SafetyCertificateOutlined,
   SearchOutlined,
   ReloadOutlined,
+  ClockCircleOutlined,
   PhoneOutlined,
   MailOutlined,
 } from '@ant-design/icons'
@@ -194,9 +195,13 @@ export default function AdminPage() {
 
       if (error) throw error
 
-      message.success(
-        newStatus === 'confirmed' ? 'Đã duyệt lịch hẹn thành công!' : 'Đã hủy lịch hẹn!'
-      )
+      const successMessage =
+        newStatus === 'confirmed'
+          ? 'Đã duyệt lịch hẹn thành công!'
+          : newStatus === 'completed'
+          ? 'Đã đánh dấu khám xong, khung giờ đã được trả lại!'
+          : 'Đã hủy lịch hẹn!'
+      message.success(successMessage)
 
       setAppointments((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
@@ -302,6 +307,62 @@ export default function AdminPage() {
     )
   })
 
+  const getAppointmentStatusTag = (status?: string) => {
+    const isConfirmed = status === 'confirmed' || status === 'Đã duyệt'
+    const isCancelled = status === 'cancelled' || status === 'Đã hủy'
+    const isCompleted = status === 'completed' || status === 'Đã khám'
+    return (
+      <Tag
+        color={isCompleted ? 'blue' : isConfirmed ? 'green' : isCancelled ? 'red' : 'orange'}
+        style={{ padding: '3px 10px', borderRadius: 12, fontWeight: 600, margin: 0 }}
+      >
+        {isCompleted ? 'Đã khám' : isConfirmed ? 'Đã duyệt' : isCancelled ? 'Đã hủy' : 'Chờ xác nhận'}
+      </Tag>
+    )
+  }
+
+  const renderAppointmentActions = (r: AppointmentItem) => {
+    const isConfirmed = r.status === 'confirmed' || r.status === 'Đã duyệt'
+    const isCancelled = r.status === 'cancelled' || r.status === 'Đã hủy'
+    const isCompleted = r.status === 'completed' || r.status === 'Đã khám'
+    return (
+      <Space wrap size={[6, 6]}>
+        {!isConfirmed && !isCancelled && !isCompleted && (
+          <Button
+            size="small"
+            type="primary"
+            style={{ backgroundColor: '#10b981', borderRadius: 6 }}
+            onClick={() => updateAppointmentStatus(r.id, 'confirmed')}
+          >
+            Duyệt
+          </Button>
+        )}
+        {isConfirmed && !isCompleted && (
+          <Popconfirm
+            title="Xác nhận bệnh nhân đã khám xong?"
+            okText="Khám xong"
+            cancelText="Chưa"
+            onConfirm={() => updateAppointmentStatus(r.id, 'completed')}
+          >
+            <Button size="small" style={{ color: '#2563eb', borderColor: '#93c5fd', borderRadius: 6 }}>
+              Khám xong
+            </Button>
+          </Popconfirm>
+        )}
+        {!isCancelled && !isCompleted && (
+          <Button
+            size="small"
+            danger
+            style={{ borderRadius: 6 }}
+            onClick={() => updateAppointmentStatus(r.id, 'cancelled')}
+          >
+            Hủy
+          </Button>
+        )}
+      </Space>
+    )
+  }
+
   const appointmentColumns = [
     {
       title: 'Thông tin Bệnh nhân',
@@ -373,50 +434,14 @@ export default function AdminPage() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (st: string) => {
-        const isConfirmed = st === 'confirmed' || st === 'Đã duyệt'
-        const isCancelled = st === 'cancelled' || st === 'Đã hủy'
-        return (
-          <Tag
-            color={isConfirmed ? 'green' : isCancelled ? 'red' : 'orange'}
-            style={{ padding: '3px 10px', borderRadius: 12, fontWeight: 600 }}
-          >
-            {isConfirmed ? 'Đã duyệt' : isCancelled ? 'Đã hủy' : 'Chờ xác nhận'}
-          </Tag>
-        )
-      },
+      render: (st: string) => getAppointmentStatusTag(st),
     },
     {
       title: 'Thao tác',
       key: 'action',
-      render: (_: any, r: AppointmentItem) => {
-        const isConfirmed = r.status === 'confirmed' || r.status === 'Đã duyệt'
-        const isCancelled = r.status === 'cancelled' || r.status === 'Đã hủy'
-        return (
-          <Space>
-            {!isConfirmed && (
-              <Button
-                size="small"
-                type="primary"
-                style={{ backgroundColor: '#10b981', borderRadius: 6 }}
-                onClick={() => updateAppointmentStatus(r.id, 'confirmed')}
-              >
-                Duyệt
-              </Button>
-            )}
-            {!isCancelled && (
-              <Button
-                size="small"
-                danger
-                style={{ borderRadius: 6 }}
-                onClick={() => updateAppointmentStatus(r.id, 'cancelled')}
-              >
-                Hủy
-              </Button>
-            )}
-          </Space>
-        )
-      },
+      width: 190,
+      fixed: 'right' as const,
+      render: (_: any, r: AppointmentItem) => renderAppointmentActions(r),
     },
   ]
 
@@ -569,7 +594,7 @@ export default function AdminPage() {
             <Search
               placeholder="Tìm theo tên bệnh nhân, số điện thoại hoặc bác sĩ..."
               allowClear
-              style={{ width: 360 }}
+              style={{ width: '100%', maxWidth: 360 }}
               prefix={<SearchOutlined />}
               onChange={(e) => setAppointmentSearch(e.target.value)}
             />
@@ -577,13 +602,56 @@ export default function AdminPage() {
               Làm mới lịch hẹn
             </Button>
           </div>
-          <Table
-            columns={appointmentColumns}
-            dataSource={filteredAppointments}
-            rowKey="id"
-            loading={loadingAppointments}
-            pagination={{ pageSize: 8 }}
-          />
+          <div className="admin-appointments-desktop">
+            <Table
+              columns={appointmentColumns}
+              dataSource={filteredAppointments}
+              rowKey="id"
+              loading={loadingAppointments}
+              pagination={{ pageSize: 8 }}
+            />
+          </div>
+          <div className="admin-appointments-mobile">
+            {loadingAppointments ? (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <Spin />
+              </div>
+            ) : filteredAppointments.length === 0 ? (
+              <div style={{ color: '#64748b', textAlign: 'center', padding: '24px 0' }}>
+                Không có lịch hẹn phù hợp.
+              </div>
+            ) : (
+              filteredAppointments.map((appointment) => (
+                <div className="admin-appointment-card" key={appointment.id}>
+                  <div className="admin-appointment-card-header">
+                    <div>
+                      <div style={{ color: '#64748b', fontSize: 12 }}>Bệnh nhân</div>
+                      <strong>{appointment.patient_name}</strong>
+                    </div>
+                    {getAppointmentStatusTag(appointment.status)}
+                  </div>
+                  <div className="admin-appointment-card-doctor">
+                    <Avatar
+                      src={appointment.doctor_avatar}
+                      icon={<UserOutlined />}
+                      size={36}
+                      style={{ backgroundColor: '#e0f2fe', color: '#0284c7' }}
+                    />
+                    <div>
+                      <strong>{appointment.doctor_name}</strong>
+                      <div style={{ color: '#64748b', fontSize: 12 }}>{appointment.doctor_specialty || 'Chưa cập nhật chuyên khoa'}</div>
+                    </div>
+                  </div>
+                  <div className="admin-appointment-card-details">
+                    <span><CalendarOutlined /> {appointment.appointment_date || 'Chưa định ngày'}</span>
+                    <span><ClockCircleOutlined /> {appointment.appointment_time || '--:--'}</span>
+                  </div>
+                  {appointment.notes && <div className="admin-appointment-card-note">Lý do: {appointment.notes}</div>}
+                  <div className="admin-appointment-card-actions">{renderAppointmentActions(appointment)}</div>
+                </div>
+              ))
+            )}
+          </div>
         </Card>
       ),
     },

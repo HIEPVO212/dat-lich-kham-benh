@@ -57,6 +57,69 @@ a {
   width: 100%;
 }
 
+.admin-appointments-mobile {
+  display: none;
+}
+
+.admin-appointment-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.admin-appointment-card + .admin-appointment-card {
+  margin-top: 12px;
+}
+
+.admin-appointment-card-header,
+.admin-appointment-card-doctor,
+.admin-appointment-card-details {
+  display: flex;
+  align-items: center;
+}
+
+.admin-appointment-card-header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-appointment-card-doctor {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-appointment-card-details {
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.admin-appointment-card-details span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-appointment-card-details svg {
+  color: #0284c7;
+}
+
+.admin-appointment-card-note {
+  margin-top: 12px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 12px;
+}
+
+.admin-appointment-card-actions {
+  margin-top: 14px;
+}
+
 .mobile-menu-button {
   display: none;
   color: #fff !important;
@@ -74,6 +137,14 @@ a {
 }
 
 @media (max-width: 767px) {
+  .admin-appointments-desktop {
+    display: none;
+  }
+
+  .admin-appointments-mobile {
+    display: block;
+  }
+
   .app-header {
     padding: 0 12px !important;
   }
