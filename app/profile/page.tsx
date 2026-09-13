@@ -28,8 +28,9 @@ export default function ProfilePage() {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('')
 
   useEffect(() => {
     async function loadProfile() {
@@ -93,26 +94,34 @@ export default function ProfilePage() {
     try {
       if (!userProfile?.id) return
 
-      // Cập nhật bảng users
-      const { error } = await supabase
-        .from('users')
-        .upsert({
-          id: userProfile.id,
-          email: userProfile.email,
-          full_name: values.fullName,
-          phone: values.phone,
-          role: userProfile.role || 'user',
-        })
+      let avatarUrl = userProfile.avatarUrl
+      if (pendingAvatarFile) {
+        const fileExt = pendingAvatarFile.name.split('.').pop()?.toLowerCase() || 'jpg'
+        const filePath = `profiles/${userProfile.id}/${Date.now()}.${fileExt}`
+        let uploadError
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const result = await supabase.storage.from('avatars').upload(filePath, pendingAvatarFile, {
+            cacheControl: '3600',
+            contentType: pendingAvatarFile.type,
+            upsert: true,
+          })
+          uploadError = result.error
+          if (!uploadError || String(uploadError.statusCode) !== '520') break
+        }
 
-      if (error) throw error
+        if (uploadError) throw uploadError
+        avatarUrl = supabase.storage.from('avatars').getPublicUrl(filePath).data.publicUrl
+      }
 
-      // Đồng thời cập nhật auth metadata
-      await supabase.auth.updateUser({
+      // Lưu hồ sơ trong Auth metadata để không phụ thuộc schema users tùy môi trường.
+      const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           full_name: values.fullName,
           phone: values.phone,
+          avatar_url: avatarUrl || null,
         },
       })
+      if (metadataError) throw metadataError
 
       message.success('Cập nhật thông tin hồ sơ thành công!')
       setUserProfile((prev) =>
@@ -121,12 +130,16 @@ export default function ProfilePage() {
               ...prev,
               fullName: values.fullName,
               phone: values.phone || '',
+              avatarUrl,
             }
           : prev,
       )
+      setPendingAvatarFile(null)
+      setAvatarPreviewUrl('')
     } catch (err) {
       console.error('Lỗi lưu profile:', err)
-      message.error('Không thể cập nhật hồ sơ: ' + (err instanceof Error ? err.message : 'Vui lòng thử lại'))
+      const saveError = err as { message?: string; details?: string }
+      message.error('Không thể cập nhật hồ sơ: ' + (saveError.message || saveError.details || 'Vui lòng thử lại'))
     } finally {
       setSaving(false)
     }
@@ -143,55 +156,15 @@ export default function ProfilePage() {
       return false
     }
 
-    setUploadingAvatar(true)
     try {
       if (!userProfile?.id) throw new Error('Không tìm thấy người dùng hiện tại')
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const filePath = `profiles/${userProfile.id}/${Date.now()}.${fileExt}`
-      let uploadError
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await supabase.storage.from('avatars').upload(filePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: true,
-        })
-        uploadError = result.error
-        if (!uploadError || String(uploadError.statusCode) !== '520') break
-      }
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
-      const avatarUrl = data.publicUrl
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: { avatar_url: avatarUrl },
-      })
-
-      if (metadataError) throw metadataError
-
-      setUserProfile((prev) => (prev ? { ...prev, avatarUrl } : prev))
-
-      const { error: profileError } = await supabase
-        .from('users')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', userProfile.id)
-
-      if (profileError) {
-        console.warn('Ảnh đã tải lên nhưng chưa đồng bộ bảng users:', profileError)
-        message.warning('Ảnh đã tải lên thành công.')
-      } else {
-        message.success('Đã cập nhật ảnh đại diện')
-      }
+      setPendingAvatarFile(file)
+      setAvatarPreviewUrl(URL.createObjectURL(file))
+      message.info('Đã chọn ảnh. Bấm "Lưu thay đổi" để cập nhật.')
     } catch (err) {
-      console.error('Lỗi upload ảnh đại diện:', err)
-      const storageError = err as { message?: string; statusCode?: number | string }
-      const errorCode = storageError.statusCode ? ` (HTTP ${storageError.statusCode})` : ''
-      message.error(
-        'Không thể tải ảnh lên' + errorCode + ': ' + (storageError.message || 'Vui lòng thử lại'),
-      )
-    } finally {
-      setUploadingAvatar(false)
+      console.error('Lỗi chọn ảnh đại diện:', err)
+      message.error(err instanceof Error ? err.message : 'Không thể chọn ảnh')
     }
 
     return false
@@ -230,7 +203,7 @@ export default function ProfilePage() {
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <Avatar
                 size={72}
-                src={userProfile?.avatarUrl}
+                src={avatarPreviewUrl || userProfile?.avatarUrl}
                 icon={<UserOutlined />}
                 style={{
                   backgroundColor:
@@ -252,7 +225,6 @@ export default function ProfilePage() {
                   shape="circle"
                   size="small"
                   icon={<UploadOutlined />}
-                  loading={uploadingAvatar}
                   aria-label="Tải ảnh đại diện"
                   title="Tải ảnh đại diện"
                   style={{ position: 'absolute', right: -4, bottom: -2 }}

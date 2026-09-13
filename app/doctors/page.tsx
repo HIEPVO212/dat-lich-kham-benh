@@ -301,8 +301,14 @@ function DoctorsContent() {
   async function handleUploadAvatar(file: File) {
     setUploadingAvatar(true)
     try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError || !userData.user) {
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+      }
+
       const fileExt = file.name.split('.').pop()
       const fileName = `doctor_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      // Ảnh bác sĩ dùng chung trong thư mục doctors, không gắn với profile admin.
       const filePath = `doctors/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -315,6 +321,7 @@ function DoctorsContent() {
       if (uploadError) throw uploadError
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      if (!data.publicUrl) throw new Error('Không lấy được đường dẫn ảnh vừa tải lên.')
       setUploadedAvatarUrl(data.publicUrl)
       message.success('Đã tải ảnh lên Supabase thành công!')
     } catch (err: any) {
