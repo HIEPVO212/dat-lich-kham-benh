@@ -19,6 +19,7 @@ import {
 import {
   StarFilled,
   PlusOutlined,
+  EditOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
   StopOutlined,
@@ -175,6 +176,7 @@ function DoctorsContent() {
 
   // Modal Thêm Bác sĩ
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -378,12 +380,29 @@ function DoctorsContent() {
     }
   }
 
-  // 5. Admin Thêm bác sĩ mới
-  async function handleAddDoctor(values: any) {
+  // Mở form để chỉnh sửa thông tin bác sĩ.
+  function handleEditDoctor(doctor: Doctor) {
+    setEditingDoctor(doctor)
+    setUploadedAvatarUrl(doctor.avatar_url || '')
+    form.setFieldsValue({
+      full_name: doctor.name.replace(`${doctor.academic_title || ''} `, ''),
+      academic_title: doctor.academic_title,
+      specialty_id: doctor.specialty_id ? String(doctor.specialty_id) : undefined,
+      hospital: doctor.hospital,
+      experience_years: doctor.experience_years,
+      bio: doctor.bio,
+      available: doctor.available,
+    })
+    setIsModalOpen(true)
+  }
+
+  // Admin thêm hoặc cập nhật bác sĩ.
+  async function handleSaveDoctor(values: any) {
     setSubmitting(true)
     try {
       const avatarFinal =
         uploadedAvatarUrl ||
+        editingDoctor?.avatar_url ||
         'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300'
 
       const payload: any = {
@@ -392,31 +411,53 @@ function DoctorsContent() {
         specialty_id: values.specialty_id ? Number(values.specialty_id) : 1,
         experience_years: values.experience_years || 5,
         avatar_url: avatarFinal,
+        bio: values.bio || null,
+        available: values.available ?? true,
+        is_accepting_bookings: values.available ?? true,
+        hospital: values.hospital || 'Chưa cập nhật cơ sở',
       }
 
-      let { error } = await supabase.from('doctor').insert([
-        {
-          ...payload,
-          available: values.available ?? true,
-          hospital: values.hospital || 'Chưa cập nhật cơ sở',
-        },
-      ])
+      let error
+      if (editingDoctor) {
+        const result = await supabase
+          .from('doctor')
+          .update(payload)
+          .eq('doctor_id', editingDoctor.id)
+        error = result.error
+      } else {
+        const result = await supabase.from('doctor').insert([payload])
+        error = result.error
+      }
 
-      if (error && error.message?.includes('available')) {
-        const res = await supabase.from('doctor').insert([payload])
-        error = res.error
+      if (error && (error.message?.includes('available') || error.message?.includes('hospital'))) {
+        const fallbackPayload = { ...payload }
+        delete fallbackPayload.available
+        delete fallbackPayload.is_accepting_bookings
+        delete fallbackPayload.hospital
+
+        if (editingDoctor) {
+          const result = await supabase
+            .from('doctor')
+            .update(fallbackPayload)
+            .eq('doctor_id', editingDoctor.id)
+          error = result.error
+        } else {
+          const result = await supabase.from('doctor').insert([fallbackPayload])
+          error = result.error
+        }
       }
 
       if (error) throw error
 
-      message.success('Thêm bác sĩ thành công!')
+      message.success(editingDoctor ? 'Cập nhật bác sĩ thành công!' : 'Thêm bác sĩ thành công!')
       setIsModalOpen(false)
+      setEditingDoctor(null)
       form.resetFields()
       setUploadedAvatarUrl('')
       loadData()
     } catch (err: any) {
-      console.error('Lỗi thêm bác sĩ:', err)
-      message.error('Lỗi thêm bác sĩ: ' + (err.message || 'Thất bại'))
+      console.error('Lỗi lưu bác sĩ:', err)
+      message.error('Lỗi lưu bác sĩ: ' + (err.message || 'Thất bại'))
     } finally {
       setSubmitting(false)
     }
@@ -475,6 +516,7 @@ function DoctorsContent() {
                 boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
               }}
               onClick={() => {
+                setEditingDoctor(null)
                 setUploadedAvatarUrl('')
                 form.resetFields()
                 setIsModalOpen(true)
@@ -571,7 +613,7 @@ function DoctorsContent() {
                     transition: 'all 0.25s ease',
                   }}
                 >
-                  {/* CÔNG TẮC ĐÓNG/MỞ LỊCH & NÚT XÓA: CHỈ HIỂN THỊ KHI LÀ ADMIN */}
+                  {/* CÔNG TẮC ĐÓNG/MỞ LỊCH, SỬA & XÓA: CHỈ HIỂN THỊ KHI LÀ ADMIN */}
                   {isAdmin && (
                     <div
                       style={{
@@ -613,6 +655,23 @@ function DoctorsContent() {
                             onChange={() => handleToggleAvailability(doc.id, isAvailable)}
                           />
                         </div>
+                      </Tooltip>
+
+                      <Tooltip title="Sửa thông tin bác sĩ">
+                        <Button
+                          type="text"
+                          icon={<EditOutlined style={{ fontSize: 15 }} />}
+                          onClick={() => handleEditDoctor(doc)}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#0284c7',
+                            border: '1px solid #bae6fd',
+                            borderRadius: 8,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            padding: '2px 8px',
+                            height: 26,
+                          }}
+                        />
                       </Tooltip>
 
                       <Popconfirm
@@ -795,18 +854,21 @@ function DoctorsContent() {
           )}
         </div>
 
-        {/* Modal Thêm Bác sĩ (Dành riêng cho Admin) */}
+        {/* Modal Thêm / Sửa Bác sĩ (Dành riêng cho Admin) */}
         <Modal
-          title={<span style={{ fontSize: 18, fontWeight: 700 }}>Thêm Bác Sĩ Mới</span>}
+          title={<span style={{ fontSize: 18, fontWeight: 700 }}>{editingDoctor ? 'Sửa Thông Tin Bác Sĩ' : 'Thêm Bác Sĩ Mới'}</span>}
           open={isModalOpen}
-          onCancel={() => setIsModalOpen(false)}
+          onCancel={() => {
+            setIsModalOpen(false)
+            setEditingDoctor(null)
+          }}
           footer={null}
           destroyOnClose
         >
           <Form
             form={form}
             layout="vertical"
-            onFinish={handleAddDoctor}
+            onFinish={handleSaveDoctor}
             initialValues={{
               academic_title: 'BS.CKI',
               hospital: 'Chưa cập nhật cơ sở',
@@ -888,6 +950,10 @@ function DoctorsContent() {
 
             <Form.Item name="experience_years" label="Số năm kinh nghiệm">
               <InputNumber min={0} max={60} style={{ width: '100%' }} />
+            </Form.Item>
+
+            <Form.Item name="bio" label="Giới thiệu bác sĩ">
+              <Input.TextArea rows={3} placeholder="Kinh nghiệm và chuyên môn nổi bật..." />
             </Form.Item>
 
             <Form.Item name="available" label="Trạng thái ban đầu" valuePropName="checked">
