@@ -4,8 +4,7 @@ create table if not exists public.reviews (
   full_name text not null,
   rating smallint not null check (rating between 1 and 5),
   content text not null,
-  created_at timestamptz not null default now(),
-  constraint reviews_one_per_user unique (user_id)
+  created_at timestamptz not null default now()
 );
 
 alter table public.reviews enable row level security;

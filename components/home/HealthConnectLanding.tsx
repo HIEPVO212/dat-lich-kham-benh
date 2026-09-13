@@ -187,7 +187,8 @@ export default function HealthConnectLanding() {
     ])
       .then(([loadedReviews, userResult]) => {
         setReviews(loadedReviews)
-        setReviewUser(Boolean(userResult.data.user))
+        const user = userResult.data.user
+        setReviewUser(Boolean(user))
       })
       .catch(() => setReviews([]))
   }, [])
@@ -200,7 +201,12 @@ export default function HealthConnectLanding() {
       setReviews(await getReviews())
       setReviewText('')
     } catch (error: unknown) {
-      window.alert(error instanceof Error ? error.message : 'Không thể gửi đánh giá.')
+      const message = error instanceof Error ? error.message : ''
+      if (message.includes('duplicate key') || message.includes('reviews_one_per_user')) {
+        window.alert('Hệ thống chưa cập nhật quyền gửi nhiều đánh giá. Vui lòng thử lại sau khi quản trị viên chạy migration.')
+      } else {
+        window.alert(message || 'Không thể gửi đánh giá.')
+      }
     } finally {
       setReviewLoading(false)
     }

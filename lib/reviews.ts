@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 
 export type Review = {
   id: number
+  user_id: string
   full_name: string
   rating: number
   content: string
@@ -11,7 +12,7 @@ export type Review = {
 export async function getReviews(): Promise<Review[]> {
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, full_name, rating, content, created_at')
+    .select('id, user_id, full_name, rating, content, created_at')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Không thể tải đánh giá: ${error.message}`)
