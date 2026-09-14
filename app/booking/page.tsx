@@ -306,7 +306,12 @@ function BookingPageContent() {
 
       let { error: apptError } = await supabase.from('appointments').insert([appointmentData])
 
-      if (apptError) {
+      // Không retry lỗi unique: database đã khóa khung giờ này.
+      if (apptError?.code === '23505') {
+        throw new Error('Khung giờ này vừa được người khác đặt. Vui lòng chọn giờ khác.')
+      }
+
+      if (apptError && (apptError.message?.includes('reason') || apptError.message?.includes('specialty'))) {
         // Một số database cũ chưa có các cột mở rộng; vẫn cho phép đặt lịch bằng cột lõi.
         const { error: retryError } = await supabase.from('appointments').insert([{
           doctor_id: docId,
@@ -319,6 +324,9 @@ function BookingPageContent() {
       }
 
       if (apptError) {
+        if (apptError.code === '23505') {
+          throw new Error('Khung giờ này vừa được người khác đặt. Vui lòng chọn giờ khác.')
+        }
         throw new Error(`Không thể lưu lịch hẹn: ${apptError.message}`)
       }
 
