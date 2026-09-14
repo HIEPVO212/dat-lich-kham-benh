@@ -1,12 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Form, Input, Button, message, Divider } from 'antd'
+import { Form, Input, Button, message } from 'antd'
 import {
   MailOutlined,
   LockOutlined,
   ArrowLeftOutlined,
-  GoogleOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -41,21 +40,6 @@ export default function LoginPage() {
       message.error(err.message || 'Đăng nhập thất bại!')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Đăng nhập với Google
-  async function handleGoogleLogin() {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
-        },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      message.error('Lỗi đăng nhập Google: ' + err.message)
     }
   }
 
@@ -152,28 +136,6 @@ export default function LoginPage() {
             Đăng nhập
           </Button>
         </Form>
-
-        <Divider plain style={{ color: '#94a3b8', fontSize: 12, margin: '20px 0' }}>
-          hoặc
-        </Divider>
-
-        <Button
-          icon={<GoogleOutlined style={{ color: '#ea4335' }} />}
-          size="large"
-          onClick={handleGoogleLogin}
-          style={{
-            width: '100%',
-            borderRadius: 12,
-            fontWeight: 600,
-            height: 44,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          Đăng nhập với Google
-        </Button>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13.5, color: '#64748b' }}>
           Chưa có tài khoản?{' '}

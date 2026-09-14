@@ -54,7 +54,7 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
 
       const { data: profile } = await supabase
         .from('users')
-        .select('role, avatar_url')
+        .select('role')
         .eq('id', currentUser.id)
         .maybeSingle()
 
@@ -62,7 +62,7 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
         ...currentUser,
         user_metadata: {
           ...currentUser.user_metadata,
-          avatar_url: profile?.avatar_url || currentUser.user_metadata?.avatar_url || '',
+          avatar_url: currentUser.user_metadata?.avatar_url || '',
         },
       })
 
@@ -99,21 +99,21 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
   }
 
   const userMenuItems: MenuProps['items'] = [
-    {
+    ...(userRole === 'admin' ? [{
       key: 'dashboard',
       icon: <DashboardOutlined />,
       label: <Link href="/dashboard" className="font-bold text-blue-600">Trang Quản trị viên</Link>,
-    },
+    }] : []),
     {
       key: 'appointments',
       icon: <ClockCircleOutlined />,
       label: <Link href="/appointments">Lịch hẹn của tôi</Link>,
     },
-    {
+    ...(userRole === 'admin' ? [{
       key: 'admin',
       icon: <SettingOutlined />,
       label: <Link href="/admin">Quản lý tài khoản</Link>,
-    },
+    }] : []),
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -133,7 +133,7 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
 
   const renderNavLinks = (onClickItem?: () => void) => (
     <nav className="flex flex-col gap-1 p-2">
-      {MENU_ITEMS.map((item) => {
+      {MENU_ITEMS.filter((item) => userRole === 'admin' || !['/dashboard', '/admin'].includes(item.key)).map((item) => {
         const isActive =
           item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)
 

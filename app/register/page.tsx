@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Form, Input, Button, message, Tabs, Divider } from 'antd'
+import { Form, Input, Button, message } from 'antd'
 import {
   UserOutlined,
   MailOutlined,
   LockOutlined,
   PhoneOutlined,
   ArrowLeftOutlined,
-  GoogleOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
@@ -75,21 +74,6 @@ export default function RegisterPage() {
       message.error(err.message || 'Đăng ký thất bại, vui lòng thử lại!')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // 2. Đăng nhập / Đăng ký 1 chạm bằng Google
-  async function handleGoogleLogin() {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
-        },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      message.error('Lỗi đăng nhập Google: ' + err.message)
     }
   }
 
@@ -281,29 +265,6 @@ export default function RegisterPage() {
             Đăng ký tài khoản
           </Button>
         </Form>
-
-        <Divider plain style={{ color: '#94a3b8', fontSize: 12, margin: '20px 0' }}>
-          hoặc
-        </Divider>
-
-        {/* Đăng nhập nhanh với Google */}
-        <Button
-          icon={<GoogleOutlined style={{ color: '#ea4335' }} />}
-          size="large"
-          onClick={handleGoogleLogin}
-          style={{
-            width: '100%',
-            borderRadius: 12,
-            fontWeight: 600,
-            height: 44,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          Tiếp tục với Google
-        </Button>
 
         {/* Chuyển sang Đăng nhập */}
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13.5, color: '#64748b' }}>
