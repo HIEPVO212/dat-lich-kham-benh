@@ -61,6 +61,7 @@ type UserItem = {
 export default function AdminPage() {
   const router = useRouter()
   const [checking, setChecking] = useState(true)
+  const [accessRole, setAccessRole] = useState<'admin' | 'member'>('admin')
 
   // State Quản lý Lịch hẹn
   const [appointments, setAppointments] = useState<AppointmentItem[]>([])
@@ -93,16 +94,18 @@ export default function AdminPage() {
 
         const userRole = profile?.role || session.user.user_metadata?.role
         const isAdmin = userEmail === 'hiepvo212600@gmail.com' || userRole === 'admin'
+        const isMember = userRole === 'member'
 
-        if (!isAdmin) {
+        if (!isAdmin && !isMember) {
           message.error('Bạn không có quyền truy cập trang quản trị')
           router.push('/')
           return
         }
 
+        setAccessRole(isAdmin ? 'admin' : 'member')
         setChecking(false)
         loadAppointments()
-        loadUsers()
+        if (isAdmin) loadUsers()
       } catch (err) {
         console.error('Lỗi check admin:', err)
         setChecking(false)
@@ -714,7 +717,11 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <Tabs defaultActiveKey="appointments" items={tabItems} size="large" />
+          <Tabs
+            defaultActiveKey="appointments"
+            items={accessRole === 'admin' ? tabItems : tabItems.filter((item) => item.key === 'appointments')}
+            size="large"
+          />
       </div>
     </PageLayout>
   )

@@ -32,7 +32,7 @@ const MENU_ITEMS = [
   { key: '/contact', label: 'Liên hệ', icon: <PhoneOutlined /> },
   { key: '/profile', label: 'Hồ sơ', icon: <UserOutlined /> },
   { key: '/dashboard', label: 'Tổng quan', icon: <DashboardOutlined /> },
-  { key: '/admin', label: 'Quản trị hệ thống', icon: <SettingOutlined /> },
+  { key: '/admin', label: 'Tiếp nhận lịch hẹn', icon: <SettingOutlined /> },
 ]
 
 export default function PageLayout({ children }: { children: React.ReactNode }) {
@@ -109,10 +109,10 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
       icon: <ClockCircleOutlined />,
       label: <Link href="/appointments">Lịch hẹn của tôi</Link>,
     },
-    ...(userRole === 'admin' ? [{
+    ...(userRole === 'admin' || userRole === 'member' ? [{
       key: 'admin',
       icon: <SettingOutlined />,
-      label: <Link href="/admin">Quản lý tài khoản</Link>,
+      label: <Link href="/admin">{userRole === 'member' ? 'Tiếp nhận lịch hẹn' : 'Quản lý tài khoản'}</Link>,
     }] : []),
     {
       key: 'profile',
@@ -133,7 +133,10 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
 
   const renderNavLinks = (onClickItem?: () => void) => (
     <nav className="flex flex-col gap-1 p-2">
-      {MENU_ITEMS.filter((item) => userRole === 'admin' || !['/dashboard', '/admin'].includes(item.key)).map((item) => {
+      {MENU_ITEMS.filter((item) =>
+        userRole === 'admin' || (userRole === 'member' && item.key !== '/dashboard') ||
+        !['/dashboard', '/admin'].includes(item.key)
+      ).map((item) => {
         const isActive =
           item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)
 

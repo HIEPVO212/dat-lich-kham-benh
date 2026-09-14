@@ -171,8 +171,9 @@ function DoctorsContent() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(6)
 
-  // Biến kiểm tra người dùng hiện tại có phải là ADMIN không
+  // Admin quản lý bác sĩ; member được bật/tắt trạng thái nhận lịch.
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isStaff, setIsStaff] = useState(false)
 
   // Modal Thêm Bác sĩ
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -196,7 +197,11 @@ function DoctorsContent() {
             .maybeSingle()
 
           const role = profile?.role || session.user.user_metadata?.role
-          if (email === 'hiepvo212600@gmail.com' || role === 'admin') {
+          const admin = email === 'hiepvo212600@gmail.com' || role === 'admin'
+          if (admin || role === 'member') {
+            setIsStaff(true)
+          }
+          if (admin) {
             setIsAdmin(true)
           }
         }
@@ -333,7 +338,7 @@ function DoctorsContent() {
     return false
   }
 
-  // 3. Admin Bật / Tắt trạng thái nhận lịch của bác sĩ
+  // Admin/member bật hoặc tắt trạng thái nhận lịch của bác sĩ.
   async function handleToggleAvailability(id: string, currentStatus: boolean) {
     const newStatus = !currentStatus
     setDoctors((prev) =>
@@ -341,20 +346,17 @@ function DoctorsContent() {
     )
 
     try {
-      const { error } = await supabase
-        .from('doctor')
-        .update({
-          available: newStatus,
-          is_accepting_bookings: newStatus,
-        })
-        .eq('doctor_id', id)
+      const { error } = isAdmin
+        ? await supabase
+            .from('doctor')
+            .update({ available: newStatus, is_accepting_bookings: newStatus })
+            .eq('doctor_id', id)
+        : await supabase.rpc('set_doctor_availability', {
+            p_doctor_id: id,
+            p_available: newStatus,
+          })
 
-      if (error) {
-        await supabase
-          .from('doctor')
-          .update({ available: newStatus })
-          .eq('id', id)
-      }
+      if (error) throw error
 
       if (newStatus) {
         message.success('Đã mở nhận lịch khám cho bác sĩ')
@@ -620,8 +622,8 @@ function DoctorsContent() {
                     transition: 'all 0.25s ease',
                   }}
                 >
-                  {/* CÔNG TẮC ĐÓNG/MỞ LỊCH, SỬA & XÓA: CHỈ HIỂN THỊ KHI LÀ ADMIN */}
-                  {isAdmin && (
+                  {/* Member chỉ có công tắc; admin có thêm sửa và xoá. */}
+                  {isStaff && (
                     <div
                       style={{
                         position: 'absolute',
@@ -664,24 +666,26 @@ function DoctorsContent() {
                         </div>
                       </Tooltip>
 
-                      <Tooltip title="Sửa thông tin bác sĩ">
-                        <Button
-                          type="text"
-                          icon={<EditOutlined style={{ fontSize: 15 }} />}
-                          onClick={() => handleEditDoctor(doc)}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            color: '#0284c7',
-                            border: '1px solid #bae6fd',
-                            borderRadius: 8,
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                            padding: '2px 8px',
-                            height: 26,
-                          }}
-                        />
-                      </Tooltip>
+                      {isAdmin && (
+                        <Tooltip title="Sửa thông tin bác sĩ">
+                          <Button
+                            type="text"
+                            icon={<EditOutlined style={{ fontSize: 15 }} />}
+                            onClick={() => handleEditDoctor(doc)}
+                            style={{
+                              backgroundColor: '#ffffff',
+                              color: '#0284c7',
+                              border: '1px solid #bae6fd',
+                              borderRadius: 8,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                              padding: '2px 8px',
+                              height: 26,
+                            }}
+                          />
+                        </Tooltip>
+                      )}
 
-                      <Popconfirm
+                      {isAdmin && <Popconfirm
                         title="Xóa bác sĩ"
                         description={`Bạn có chắc muốn xóa ${doc.name}?`}
                         onConfirm={() => handleDeleteDoctor(doc.id)}
@@ -702,7 +706,7 @@ function DoctorsContent() {
                             height: 26,
                           }}
                         />
-                      </Popconfirm>
+                      </Popconfirm>}
                     </div>
                   )}
 
@@ -713,7 +717,7 @@ function DoctorsContent() {
                         display: 'flex',
                         gap: 16,
                         alignItems: 'center',
-                        paddingRight: isAdmin ? 80 : 0,
+                            paddingRight: isStaff ? 110 : 0,
                       }}
                     >
                       <img
