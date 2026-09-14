@@ -59,13 +59,22 @@ export default function DashboardPage() {
 
         // Tải danh sách bác sĩ
         const { data: doctors } = await supabase.from('doctor').select('*')
+        const { data: specialties } = await supabase.from('specialty').select('*')
+        const specialtyMap = new Map<string, string>()
+        ;(specialties || []).forEach((specialty: any) => {
+          specialtyMap.set(
+            String(specialty.specialty_id || specialty.id),
+            specialty.specialty_name || specialty.name || 'Đa khoa',
+          )
+        })
+
         const docMap = new Map<string, any>()
         const specCountMap = new Map<string, number>()
 
         ;(doctors || []).forEach((d: any) => {
           const docId = String(d.doctor_id || d.id)
           docMap.set(docId, d)
-          const spec = d.specialty || 'Đa khoa'
+          const spec = specialtyMap.get(String(d.specialty_id || '')) || d.specialty || 'Đa khoa'
           specCountMap.set(spec, (specCountMap.get(spec) || 0) + 1)
         })
 

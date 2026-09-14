@@ -57,7 +57,7 @@ export default function RegisterPage() {
             email,
             full_name: values.fullName,
             role: 'user',
-            status: 'pending',
+            status: 'active',
           })
         } catch (e) {
           console.warn('Lưu users:', e)

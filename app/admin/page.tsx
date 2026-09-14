@@ -272,24 +272,6 @@ export default function AdminPage() {
     }
   }
 
-  async function handleApproveUser(userId: string) {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ status: 'active' })
-        .eq('id', userId)
-
-      if (error) throw error
-
-      message.success('Đã duyệt tài khoản thành công')
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, status: 'active' } : u))
-      )
-    } catch (err: any) {
-      message.error('Không thể duyệt tài khoản: ' + err.message)
-    }
-  }
-
   if (checking) {
     return (
       <PageLayout>
@@ -516,7 +498,7 @@ export default function AdminPage() {
       },
     },
     {
-      title: 'Phê duyệt vai trò',
+      title: 'Phân quyền',
       key: 'approve_role',
       render: (_: any, record: UserItem) => (
         <Select
@@ -545,8 +527,8 @@ export default function AdminPage() {
       key: 'status',
       render: (_: any, record: UserItem) => (
         <Badge
-          status={record.status === 'pending' ? 'warning' : record.status === 'blocked' ? 'error' : 'success'}
-          text={record.status === 'pending' ? 'Chờ duyệt' : record.status === 'blocked' ? 'Đã khóa' : 'Hoạt động'}
+          status={record.status === 'blocked' ? 'error' : 'success'}
+          text={record.status === 'blocked' ? 'Đã khóa' : 'Hoạt động'}
         />
       ),
     },
@@ -554,31 +536,17 @@ export default function AdminPage() {
       title: 'Thao tác',
       key: 'action',
       render: (_: any, record: UserItem) => (
-        record.status === 'pending' ? (
-          <Popconfirm
-            title="Duyệt tài khoản này?"
-            description="Tài khoản sẽ được kích hoạt và có thể sử dụng hệ thống."
-            onConfirm={() => handleApproveUser(record.id)}
-            okText="Duyệt tài khoản"
-            cancelText="Hủy"
-          >
-            <Button type="primary" size="small" style={{ borderRadius: 6 }}>
-              Duyệt tài khoản
-            </Button>
-          </Popconfirm>
-        ) : (
-          <Popconfirm
-            title="Thay đổi trạng thái tài khoản"
-            description={`Bạn muốn ${record.status === 'blocked' ? 'kích hoạt lại' : 'khóa'} tài khoản này?`}
-            onConfirm={() => handleToggleStatus(record.id, record.status)}
-            okText="Đồng ý"
-            cancelText="Hủy"
-          >
-            <Button size="small" danger={record.status !== 'blocked'} style={{ borderRadius: 6 }}>
-              {record.status === 'blocked' ? 'Kích hoạt lại' : 'Khóa'}
-            </Button>
-          </Popconfirm>
-        )
+        <Popconfirm
+          title="Thay đổi trạng thái tài khoản"
+          description={`Bạn muốn ${record.status === 'blocked' ? 'kích hoạt lại' : 'khóa'} tài khoản này?`}
+          onConfirm={() => handleToggleStatus(record.id, record.status)}
+          okText="Đồng ý"
+          cancelText="Hủy"
+        >
+          <Button size="small" danger={record.status !== 'blocked'} style={{ borderRadius: 6 }}>
+            {record.status === 'blocked' ? 'Kích hoạt lại' : 'Khóa'}
+          </Button>
+        </Popconfirm>
       ),
     },
   ]
@@ -662,7 +630,7 @@ export default function AdminPage() {
       key: 'users',
       label: (
         <span style={{ fontSize: 15, fontWeight: 600 }}>
-          <TeamOutlined /> Quản lý Người dùng & Phê duyệt ({users.length})
+          <TeamOutlined /> Quản lý Người dùng & Phân quyền ({users.length})
         </span>
       ),
       children: (
@@ -713,7 +681,7 @@ export default function AdminPage() {
             Hệ Thống Quản Trị Trung Tâm
           </h1>
           <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>
-            Quản lý phê duyệt chi tiết lịch hẹn bệnh nhân và phân quyền tài khoản thành viên
+                    Quản lý lịch hẹn bệnh nhân và phân quyền tài khoản thành viên
           </p>
         </div>
 
